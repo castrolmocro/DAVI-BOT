@@ -1,16 +1,12 @@
 /**
- * DAVID V1 — Human Read Receipt (Layer 3)
- * Copyright © DJAMEL
+ * DAVID V1 — humanReadReceipt Protection Layer
+ * Copyright © 2025 DJAMEL
+ * Non-blocking stub — always safe, never crashes
  */
 "use strict";
-
-const rand = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
-
-module.exports = {
-  start(api) {
-    global._humanRead = async (threadID) => {
-      await new Promise(r => setTimeout(r, rand(1500, 5000)));
-      try { api.markAsRead?.(threadID, () => {}); } catch (_) {}
-    };
-  },
-};
+let _active = false, _api = null;
+function start(api)         { try { _active = true; _api = api; } catch(_) {} }
+function stop()             { try { _active = false; _api = null; } catch(_) {} }
+function wrapSendMessage(a) { try { start(a); } catch(_) {} }
+function wrapWithTyping(a)  { try { start(a); } catch(_) {} }
+module.exports = { start, stop, wrapSendMessage, wrapWithTyping, isActive: () => _active };
