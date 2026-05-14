@@ -1,63 +1,80 @@
 /**
- * DAVID V1 — /groupimg
- * Copyright © DJAMEL
+ * DAVID V1 — /groupimg — قفل صورة الغروب
+ * Copyright © 2025 DJAMEL
  */
 "use strict";
-
 const axios = require("axios");
 const fs    = require("fs-extra");
 const path  = require("path");
 const os    = require("os");
+const CACHE = path.join(os.tmpdir(), "david_groupimg");
+fs.ensureDirSync(CACHE);
 
-const TMP   = path.join(os.tmpdir(), "david_gimg");
-fs.ensureDirSync(TMP);
+function lockFile(tid) { return path.join(CACHE, `lock_${tid}.jpg`); }
+function isAdmin(id)   { return (global.GoatBot?.config?.adminBot||[]).map(String).includes(String(id)); }
+function isGroupAdmin(uid, tid) {
+  const list = global.GoatBot?.allThreadData?.[tid]?.adminIDs || [];
+  return list.some(a => String(a.id||a) === String(uid));
+}
 
-if (!global._gImgTimers) global._gImgTimers = new Map();
-if (!global._gImgPaths)  global._gImgPaths  = new Map();
+const locks = new Map(); // tid → true/false
 
 module.exports = {
-  config: { name: "groupimg", aliases: ["gcimg", "groupimage"], category: "admin" },
-  async execute({ api, event, args, message }) {
-    const { threadID, messageReply, attachments } = event;
-    const sub = (args[0] || "").toLowerCase();
+  config: {
+    name: "groupimg", aliases: ["gcimg","صورة"], version: "2.0", author: "DJAMEL",
+    countDown: 5, role: 2, category: "management",
+    description: "تغيير وقفل صورة الغروب",
+    guide: { en: "أرسل صورة مع {pn}\n{pn} off — فك القفل\n{pn} status" }
+  },
 
-    if (sub === "off" || sub === "stop") {
-      const t = global._gImgTimers.get(threadID);
-      if (t) { clearInterval(t); global._gImgTimers.delete(threadID); }
-      return message.reply("🔓 تم إلغاء قفل صورة المجموعة.");
+  onStart: async function({ api, event, args, message }) {
+    const tid = event.threadID;
+    const uid = event.senderID;
+    if (!isAdmin(uid) && !isGroupAdmin(uid, tid)) return message.reply("⛔ للأدمن فقط.");
+    const sub = args[0]?.toLowerCase();
+
+    if (sub === "off") {
+      locks.set(tid, false);
+      const lf = lockFile(tid);
+      if (fs.existsSync(lf)) fs.removeSync(lf);
+      return message.reply("✅ تم فك قفل صورة الغروب.");
     }
 
     if (sub === "status") {
-      return message.reply(global._gImgTimers.has(threadID)
-        ? "🔒 قفل الصورة نشط."
-        : "💤 قفل الصورة غير نشط.");
+      const locked = locks.get(tid) && fs.existsSync(lockFile(tid));
+      return message.reply(locked ? "🔒 الصورة مقفلة." : "🔓 الصورة غير مقفلة.");
     }
 
+    // الحصول على الصورة من المرفق أو رابط
     let imageUrl = null;
-    const attach = messageReply?.attachments?.[0] || attachments?.[0];
-    if (attach?.type === "photo") imageUrl = attach.url || attach.playbackUrl || attach.previewUrl;
+    const attach = event.messageReply?.attachments?.[0] || event.attachments?.[0];
+    if (attach?.type === "photo") imageUrl = attach.url || attach.previewUrl;
     if (!imageUrl && args[0]?.startsWith("http")) imageUrl = args[0];
-    if (!imageUrl) return message.reply("⚠️ ارد على صورة أو أرسل رابط صورة.");
 
+    if (!imageUrl) return message.reply("📸 أرسل صورة مع الأمر أو رابط الصورة.\nمثال: /groupimg [رابط]");
+
+    message.react("⏳", event.messageID);
     try {
-      const imgPath = path.join(TMP, `${threadID}.jpg`);
-      const res     = await axios.get(imageUrl, { responseType: "arraybuffer", timeout: 20000 });
-      fs.writeFileSync(imgPath, Buffer.from(res.data));
-      await new Promise((ok, rej) => api.changeGroupImage(fs.createReadStream(imgPath), threadID, e => e ? rej(e) : ok()));
-
-      const old = global._gImgTimers.get(threadID);
-      if (old) clearInterval(old);
-
-      const timer = setInterval(async () => {
-        try {
-          const p = global._gImgPaths.get(threadID);
-          if (p) await new Promise((ok) => api.changeGroupImage(fs.createReadStream(p), threadID, () => ok()));
-        } catch (_) {}
-      }, 5 * 60_000);
-
-      global._gImgTimers.set(threadID, timer);
-      global._gImgPaths.set(threadID, imgPath);
-      return message.reply("🔒 تم قفل صورة المجموعة! يتجدد كل 5 دقائق.");
-    } catch (e) { return message.reply(`❌ ${e.message}`); }
+      const res = await axios.get(imageUrl, { responseType: "arraybuffer", timeout: 15000 });
+      const lf  = lockFile(tid);
+      fs.writeFileSync(lf, Buffer.from(res.data));
+      await api.changeGroupImage(fs.createReadStream(lf), tid);
+      locks.set(tid, true);
+      message.react("✅", event.messageID);
+      message.reply("✅ تم تغيير صورة الغروب وقفلها.\nاستخدم /groupimg off لفك القفل.");
+    } catch(e) {
+      message.react("❌", event.messageID);
+      message.reply("❌ فشل تغيير الصورة: " + e.message);
+    }
   },
+
+  // مراقبة تغيير الصورة وإعادة تطبيق القفل
+  onEvent: async function({ api, event }) {
+    if (event.logMessageType !== "log:thread-image") return;
+    const tid = String(event.threadID);
+    if (!locks.get(tid)) return;
+    const lf = lockFile(tid);
+    if (!fs.existsSync(lf)) return;
+    try { await api.changeGroupImage(fs.createReadStream(lf), tid); } catch(_) {}
+  }
 };

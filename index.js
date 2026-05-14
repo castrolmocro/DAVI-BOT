@@ -1,50 +1,79 @@
 /**
- * ╔══════════════════════════════════════════════════════════╗
- * ║           DAVID V1 — Watchdog / Entry Point             ║
- * ║           Copyright © DJAMEL — All rights reserved      ║
- * ╚══════════════════════════════════════════════════════════╝
+ * ╔══════════════════════════════════════════════════════════════════╗
+ * ║         DAVID V1 — Watchdog / Entry Point                       ║
+ * ║         Copyright © 2025 DJAMEL — All rights reserved          ║
+ * ╚══════════════════════════════════════════════════════════════════╝
+ *
+ * يراقب العملية الرئيسية ويعيد تشغيلها عند الانهيار
+ * مع backoff تصاعدي وحد أقصى للمحاولات
  */
-
 "use strict";
 
-const { spawn }  = require("child_process");
-const path       = require("path");
-const chalk      = require("chalk");
+const { spawn } = require("child_process");
+const path      = require("path");
+const chalk     = require("chalk");
 
-const MAX_RESTARTS  = 15;
-const RESTART_DELAY = 5000;
+const MAX_RESTARTS      = 20;
+const BASE_DELAY_MS     = 3000;
+const MAX_DELAY_MS      = 5 * 60 * 1000;
+const BACKOFF_MULTIPLIER = 1.8;
+const RESET_AFTER_MS    = 10 * 60 * 1000;
 
 let restartCount = 0;
+let currentDelay = BASE_DELAY_MS;
+let stableTimer  = null;
 let child        = null;
+
+function log(msg) {
+  const t = new Date().toTimeString().slice(0, 8);
+  console.log(`${chalk.gray(t)} ${chalk.cyan("[WATCHDOG]")} ${msg}`);
+}
 
 function start() {
   if (restartCount >= MAX_RESTARTS) {
-    console.error(chalk.red(`[WATCHDOG] Max restarts (${MAX_RESTARTS}) reached. Stopping.`));
+    log(chalk.red(`وصل لأقصى إعادات تشغيل (${MAX_RESTARTS}). توقف.`));
     process.exit(1);
   }
 
   restartCount++;
-  const entry = path.join(__dirname, "src", "index.js");
+  log(chalk.cyan(`تشغيل DAVID V1... (محاولة ${restartCount})`));
 
-  console.log(chalk.cyan(`\n[WATCHDOG] Starting DAVID V1... (attempt ${restartCount})`));
-
-  child = spawn(process.execPath, [entry], {
+  child = spawn(process.execPath, [path.join(__dirname, "Goat.js")], {
     stdio: "inherit",
     env:   process.env,
   });
 
-  child.on("exit", (code, signal) => {
-    if (code === 0) {
-      console.log(chalk.green("[WATCHDOG] Bot exited cleanly."));
-      process.exit(0);
+  // إعادة تعيين العداد بعد استقرار البوت
+  if (stableTimer) clearTimeout(stableTimer);
+  stableTimer = setTimeout(() => {
+    if (restartCount > 0) {
+      log(chalk.green(`البوت مستقر ${RESET_AFTER_MS / 60000} دقيقة — إعادة تعيين العداد`));
+      restartCount = 0;
+      currentDelay = BASE_DELAY_MS;
     }
-    console.log(chalk.yellow(`[WATCHDOG] Exited with code ${code} signal ${signal} — restarting in ${RESTART_DELAY / 1000}s...`));
-    setTimeout(start, RESTART_DELAY);
+  }, RESET_AFTER_MS);
+
+  child.on("exit", (code, signal) => {
+    if (stableTimer) clearTimeout(stableTimer);
+
+    // الخروج النظيف (exit 0) — إعادة تشغيل سريعة (أمر /restart)
+    if (code === 0) {
+      log(chalk.green("خروج نظيف — إعادة تشغيل فورية…"));
+      restartCount = 0; currentDelay = BASE_DELAY_MS;
+      setTimeout(start, 1000);
+      return;
+    }
+
+    log(chalk.yellow(`خرج بكود ${code} إشارة ${signal} — إعادة تشغيل بعد ${Math.round(currentDelay/1000)}s…`));
+    setTimeout(() => {
+      currentDelay = Math.min(currentDelay * BACKOFF_MULTIPLIER, MAX_DELAY_MS);
+      start();
+    }, currentDelay);
   });
 
-  child.on("error", (err) => {
-    console.error(chalk.red(`[WATCHDOG] Spawn error: ${err.message}`));
-    setTimeout(start, RESTART_DELAY);
+  child.on("error", err => {
+    log(chalk.red(`خطأ spawn: ${err.message}`));
+    setTimeout(start, currentDelay);
   });
 }
 

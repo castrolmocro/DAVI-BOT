@@ -1,44 +1,74 @@
 /**
- * DAVID V1 — /chats
- * Copyright © DJAMEL
+ * DAVID V1 — /chats — إدارة المحادثات والغروبات
+ * Copyright © 2025 DJAMEL
  */
 "use strict";
-
 const fs   = require("fs-extra");
 const path = require("path");
-const DM_PATH = path.join(__dirname, "../../data/dmLock.json");
+const DM_DATA = path.join(process.cwd(), "database/data/dmLock.json");
 
+function isAdmin(id) { return (global.GoatBot?.config?.adminBot||[]).map(String).includes(String(id)); }
 function getDmLocked() {
-  try { return fs.existsSync(DM_PATH) ? JSON.parse(fs.readFileSync(DM_PATH)).locked : false; } catch { return false; }
+  if (global.GoatBot.dmLocked !== undefined) return !!global.GoatBot.dmLocked;
+  try { if(fs.existsSync(DM_DATA)) { const d=JSON.parse(fs.readFileSync(DM_DATA,"utf8")); global.GoatBot.dmLocked=!!d.locked; return global.GoatBot.dmLocked; } } catch(_) {}
+  return false;
 }
 function setDmLocked(v) {
-  fs.ensureDirSync(path.dirname(DM_PATH));
-  fs.writeFileSync(DM_PATH, JSON.stringify({ locked: !!v }));
+  global.GoatBot.dmLocked = !!v;
+  try { fs.ensureDirSync(path.dirname(DM_DATA)); fs.writeFileSync(DM_DATA,JSON.stringify({locked:!!v},null,2)); } catch(_) {}
 }
 
 module.exports = {
-  config: { name: "chats", aliases: ["dm", "dmlock"], category: "admin" },
-  async execute({ args, message }) {
-    const sub = (args[0] || "").toLowerCase();
-    const val = (args[1] || "").toLowerCase();
+  config: {
+    name: "chats", aliases: ["محادثات","chat"], version: "2.0", author: "DJAMEL",
+    countDown: 3, role: 2, category: "management",
+    description: "إدارة المحادثات والغروبات",
+    guide: { en: "{pn} list — قائمة الغروبات\n{pn} dm on/off — قفل/فك DM\n{pn} angel — حالة Angel\n{pn} count" }
+  },
 
-    if (sub === "dmlock") {
-      if (val === "on" || val === "enable") { setDmLocked(true); return message.reply("🔒 DM Lock مُفعَّل. فقط الأدمن يمكنهم مراسلة البوت."); }
-      if (val === "off" || val === "disable") { setDmLocked(false); return message.reply("🔓 DM Lock مُعطَّل."); }
-      return message.reply(`📩 DM Lock: ${getDmLocked() ? "🔒 ON" : "🔓 OFF"}`);
+  onStart: async function({ api, event, args, message }) {
+    if (!isAdmin(event.senderID)) return message.reply("⛔ للأدمن فقط.");
+    const sub = args[0]?.toLowerCase();
+
+    if (!sub || sub === "count") {
+      try {
+        const threads = await new Promise((res,rej) => api.getThreadList(15,null,["INBOX"],(e,d)=>e?rej(e):res(d)));
+        const groups = (threads||[]).filter(t => t.isGroup);
+        const dms    = (threads||[]).filter(t => !t.isGroup);
+        let msg = `📊 إحصائيات المحادثات\n`;
+        msg += `━━━━━━━━━━━━━━━━━\n`;
+        msg += `👥 غروبات: ${groups.length}\n`;
+        msg += `💬 محادثات خاصة: ${dms.length}\n`;
+        msg += `🔒 DM Lock: ${getDmLocked() ? "مفعل" : "معطل"}\n`;
+        msg += `🤖 Angel: ${Object.keys(global.GoatBot.angelIntervals||{}).length} غروب نشط`;
+        return message.reply(msg);
+      } catch(e) { return message.reply("❌ " + e.message); }
     }
 
-    const cmds = global.commands?.size || 0;
-    const cfg  = global.config || {};
-    return message.reply(
-`💬 إعدادات البوت — DAVID V1
+    if (sub === "list") {
+      try {
+        const threads = await new Promise((res,rej) => api.getThreadList(20,null,["INBOX"],(e,d)=>e?rej(e):res(d)));
+        const groups = (threads||[]).filter(t => t.isGroup).slice(0, 10);
+        if (!groups.length) return message.reply("لا توجد غروبات.");
+        let msg = "📋 قائمة الغروبات:\n━━━━━━━━━━━━━━━━━\n";
+        groups.forEach((g,i) => { msg += `${i+1}. ${g.name||"بلا اسم"}\n   ID: ${g.threadID}\n`; });
+        return message.reply(msg);
+      } catch(e) { return message.reply("❌ " + e.message); }
+    }
 
-🔧 Prefix:    ${cfg.prefix || "/"}
-📩 DM Lock:   ${getDmLocked() ? "🔒 ON" : "🔓 OFF"}
-👑 Admins:    ${(cfg.adminIDs || []).length}
-📦 Commands:  ${cmds}
-🛡️  Protection: 16 Systems
-👑 Developer: DJAMEL`
-    );
-  },
+    if (sub === "dm") {
+      const action = args[1]?.toLowerCase();
+      if (action === "on")  { setDmLocked(true);  return message.reply("✅ تم تفعيل DM Lock — البوت لن يرد على الرسائل الخاصة."); }
+      if (action === "off") { setDmLocked(false); return message.reply("✅ تم إلغاء DM Lock."); }
+      return message.reply(`🔒 DM Lock: ${getDmLocked() ? "مفعل" : "معطل"}\nاستخدم: /chats dm on/off`);
+    }
+
+    if (sub === "angel") {
+      const active = Object.keys(global.GoatBot.angelIntervals||{});
+      if (!active.length) return message.reply("💤 Angel غير مفعل في أي غروب.");
+      return message.reply(`🔔 Angel نشط في ${active.length} غروب:\n${active.map((t,i)=>`${i+1}. ${t}`).join("\n")}`);
+    }
+
+    message.reply("📌 الأوامر المتاحة:\n/chats count\n/chats list\n/chats dm on/off\n/chats angel");
+  }
 };

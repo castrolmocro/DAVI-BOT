@@ -1,22 +1,27 @@
 /**
- * DAVID V1 — Rate Limiter (Layer 6)
- * Copyright © DJAMEL
+ * DAVID V1 — Rate Limit Store
+ * Copyright © 2025 DJAMEL
  */
 "use strict";
+const store = new Map();
 
-const _map     = new Map();
-const _warned  = new Set();
-
-function check(key, limit, windowMs) {
+function check(key, maxEvents, windowMs) {
   const now = Date.now();
-  let e = _map.get(key);
-  if (!e || now > e.resetAt) { e = { count: 0, resetAt: now + windowMs }; }
-  e.count++;
-  _map.set(key, e);
-  return { exceeded: e.count > limit, warned: _warned.has(key), count: e.count };
+  if (!store.has(key)) store.set(key, { events: [], warned: false });
+  const entry = store.get(key);
+  entry.events = entry.events.filter(t => now - t < windowMs);
+  entry.events.push(now);
+  return { exceeded: entry.events.length > maxEvents, count: entry.events.length, warned: entry.warned };
 }
 
-function setWarned(key) { _warned.add(key); }
-function reset(key) { _map.delete(key); _warned.delete(key); }
-
-module.exports = { check, setWarned, reset };
+function setWarned(key) { if (store.has(key)) store.get(key).warned = true; }
+function reset(key)     { store.delete(key); }
+function cleanup(wMs = 60000) {
+  const now = Date.now();
+  for (const [k, e] of store) {
+    e.events = e.events.filter(t => now - t < wMs);
+    if (!e.events.length) store.delete(k);
+  }
+}
+setInterval(() => cleanup(5 * 60000), 5 * 60000);
+module.exports = { check, setWarned, reset, cleanup };

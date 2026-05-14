@@ -1,67 +1,93 @@
 /**
- * DAVID V1 — /nm (Name Manager)
- * Copyright © DJAMEL
+ * DAVID V1 — /nm — قفل اسم الغروب مع تجديد دوري
+ * Copyright © 2025 DJAMEL
  */
 "use strict";
 
-if (!global._nmTimers) global._nmTimers = new Map();
-if (!global._nmConfigs) global._nmConfigs = new Map();
+if (!global._nmIntervals) global._nmIntervals = new Map();
+if (!global._nmLocks)     global._nmLocks     = new Map();
 
-const rand = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+function isAdmin(id) { return (global.GoatBot?.config?.adminBot||[]).map(String).includes(String(id)); }
+function rand(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
 
-function stopNm(threadID) {
-  const t = global._nmTimers.get(threadID);
-  if (t) { clearTimeout(t); global._nmTimers.delete(threadID); }
+function getMs(lock) {
+  const min = lock.minDelay ?? lock.delay ?? 30;
+  const max = lock.maxDelay ?? min;
+  return rand(min, max) * 1000;
 }
 
-function scheduleNm(api, threadID) {
-  stopNm(threadID);
-  const cfg = global._nmConfigs.get(threadID);
-  if (!cfg?.enabled) return;
-  const delay = rand(cfg.minDelay || 30, cfg.maxDelay || 60) * 1000;
-  const t = setTimeout(async () => {
-    try { await new Promise(res => api.setTitle(cfg.name, threadID, () => res())); } catch (_) {}
-    scheduleNm(api, threadID);
-  }, delay);
-  global._nmTimers.set(threadID, t);
+function stopInterval(tid) {
+  if (global._nmIntervals.has(tid)) { clearTimeout(global._nmIntervals.get(tid)); global._nmIntervals.delete(tid); }
+}
+
+function startInterval(api, tid, lock) {
+  stopInterval(tid);
+  if (!lock?.enabled || !lock?.name) return;
+  global._nmLocks.set(tid, lock);
+
+  function schedule() {
+    const t = setTimeout(async () => {
+      global._nmIntervals.delete(tid);
+      const cur = global._nmLocks.get(tid);
+      if (!cur?.enabled || !cur?.name) return;
+      try { await api.setTitle(cur.name, tid); } catch(_) {}
+      schedule();
+    }, getMs(lock));
+    global._nmIntervals.set(tid, t);
+  }
+  schedule();
+}
+
+function restoreAll(api) {
+  if (global._nmRestored) return; global._nmRestored = true;
+  for (const [tid, lock] of global._nmLocks) {
+    if (lock?.enabled && lock?.name) startInterval(api, tid, lock);
+  }
 }
 
 module.exports = {
-  config: { name: "nm", aliases: ["namelock", "groupname"], category: "admin" },
-  async execute({ api, event, args, message }) {
-    const { threadID } = event;
-    const sub = (args[0] || "").toLowerCase();
+  config: {
+    name: "nm", aliases: ["namemute","غلق"], version: "2.0", author: "DJAMEL",
+    countDown: 3, role: 2, category: "management",
+    description: "قفل اسم الغروب مع تجديد دوري",
+    guide: { en: "{pn} [اسم] — قفل\n/unm — فك قفل\n{pn} time [min] [max] — وقت التجديد\n{pn} status" }
+  },
 
-    if (sub === "off" || sub === "stop" || sub === "unlock") {
-      stopNm(threadID);
-      global._nmConfigs.delete(threadID);
-      return message.reply("🔓 تم إلغاء قفل اسم المجموعة.");
-    }
+  onStart: async function({ api, event, args, message }) {
+    const tid = event.threadID;
+    if (!isAdmin(event.senderID)) return message.reply("⛔ للأدمن فقط.");
+    restoreAll(api);
+    const sub = args[0]?.toLowerCase();
 
     if (sub === "status") {
-      const cfg = global._nmConfigs.get(threadID);
-      if (!cfg?.enabled) return message.reply("💤 قفل الاسم غير نشط.");
-      return message.reply(`🔒 قفل الاسم نشط\n📝 الاسم: "${cfg.name}"\n⏱ كل ${cfg.minDelay}–${cfg.maxDelay}ث`);
+      const lock = global._nmLocks.get(tid);
+      if (!lock?.enabled) return message.reply("💤 NM غير مفعل.");
+      return message.reply(`✅ NM مفعل\n📝 "${lock.name}"\n⏱ ${lock.minDelay}–${lock.maxDelay}s`);
+    }
+
+    if (sub === "off" || sub === "فك" || sub === "unm") {
+      stopInterval(tid);
+      const l = global._nmLocks.get(tid);
+      if (l) { l.enabled = false; global._nmLocks.set(tid, l); }
+      return message.reply("✅ تم فك قفل NM.");
     }
 
     if (sub === "time") {
-      const cfg = global._nmConfigs.get(threadID);
-      if (!cfg) return message.reply("⚠️ شغّل قفل الاسم أولاً.");
-      const min = parseInt(args[1]); const max = parseInt(args[2]) || min;
-      if (!min || min < 5) return message.reply("⚠️ الحد الأدنى 5 ثوان.");
-      cfg.minDelay = min; cfg.maxDelay = max;
-      scheduleNm(api, threadID);
-      return message.reply(`✅ الفاصل الزمني: ${min}–${max}ث`);
+      const lock = global._nmLocks.get(tid) || {};
+      lock.minDelay = parseInt(args[1]) || 30;
+      lock.maxDelay = Math.max(parseInt(args[2]) || lock.minDelay, lock.minDelay);
+      global._nmLocks.set(tid, lock);
+      if (lock.enabled) { startInterval(api, tid, lock); }
+      return message.reply(`✅ وقت التجديد: ${lock.minDelay}–${lock.maxDelay}s`);
     }
 
     const name = args.join(" ").trim();
-    if (!name) return message.reply("⚠️ اكتب اسم المجموعة.\nمثال: /nm اسم المجموعة");
+    if (!name) return message.reply("❌ اكتب الاسم.\nمثال: /nm DAVID GROUP");
 
-    const cfg = { name, enabled: true, minDelay: 30, maxDelay: 60 };
-    global._nmConfigs.set(threadID, cfg);
-    scheduleNm(api, threadID);
-
-    try { await new Promise(res => api.setTitle(name, threadID, () => res())); } catch (_) {}
-    return message.reply(`🔒 قفل الاسم بدأ!\n📝 الاسم: "${name}"\n⏱ كل 30–60 ثانية`);
-  },
+    const lock = { enabled: true, name, minDelay: 30, maxDelay: 60, ...(global._nmLocks.get(tid)||{}) };
+    lock.name = name; lock.enabled = true;
+    startInterval(api, tid, lock);
+    try { await api.setTitle(name, tid); } catch(_) {}
+    message.reply(`✅ تم قفل الاسم: "${name}"\n⏱ تجديد كل ${lock.minDelay}–${lock.maxDelay}s`);
+  }
 };

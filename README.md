@@ -1,122 +1,51 @@
-# DAVID V1 — Facebook Messenger Bot
+# DAVID V1 — DjamelBot Engine
 
-> **المطور: DJAMEL** — جميع الحقوق محفوظة
+> **Copyright © 2025 DJAMEL — All rights reserved**
 
-بوت فيسبوك ماسنجر متكامل مبني على **DjamelBot Engine** ومكتبة **Djamel-fca** المخصصة.
+## Overview
 
----
+DAVID V1 is a high-performance Facebook Messenger bot engine built from the ground up by **DJAMEL**, integrating the best features of WHITE-V3 and Jarfis architectures into a unified, production-ready system.
 
-## المميزات
+## Features
 
-- 🤖 **DjamelBot Engine** — محرك بوت كامل ومتطور
-- 🍪 **c3c Cookie Login** — يدعم تنسيق fca-eryxenx و @dongdev
-- 🛡️ **16 نظام حماية** — Anti-flood, stealth, session refresh, وأكثر
-- 🎛️ **لوحة تحكم جميلة** — Socket.IO للتحديثات الفورية، تدعم PC والموبايل
-- 👑 **نظام أدمن صارم** — يتجاهل رسائل غير الأدمن كلياً بدون أي رد
-- 🔄 **إعادة تسجيل دخول تلقائية** — عند انتهاء صلاحية الكوكي
+- 🔥 **Custom Djamel-fca Library** — Supports c3c, JSON, Netscape, Header String cookies
+- 🛡️ **20 Protection Layers** — Stealth, Keep-Alive, MQTT Health Check, Rate Limiting, and more
+- ⚡ **GoatBot-Compatible Engine** — Full `global.GoatBot` pattern with MQTT + HTTP Long-Poll fallback
+- 🌐 **iOS-Style Dashboard** — Real-time stats, cookie upload, command management
+- 🎮 **9 Built-in Commands** — angel, divel, nick, nm, chats, groupimg, song, tik, uptime
 
----
+## Commands
 
-## الأوامر (للأدمن فقط)
+| Command | Description |
+|---------|-------------|
+| `/angel` | رسائل تلقائية دورية للغروبات |
+| `/divel` | رسائل دورية مع انتظار عشوائي |
+| `/nick`  | تغيير كنية جميع الأعضاء باستمرار |
+| `/nm`    | قفل اسم الغروب |
+| `/chats` | إدارة المحادثات والغروبات |
+| `/groupimg` | تغيير وقفل صورة الغروب |
+| `/song`  | البحث وتنزيل الأغاني من YouTube |
+| `/tiktok` | تنزيل فيديو TikTok بدون علامة مائية |
+| `/uptime` | وقت تشغيل البوت مع الإحصائيات |
 
-| الأمر | الوظيفة |
-|-------|---------|
-| `/angel` | إرسال رسائل تحفيزية دورية للمجموعة |
-| `/divel` | مراقبة إعدادات المجموعة وحمايتها |
-| `/nick [اسم]` | قفل كنيات جميع الأعضاء |
-| `/nm [اسم]` | قفل اسم المجموعة وتجديده تلقائياً |
-| `/uptime` | إحصائيات البوت والنظام |
-| `/chats` | إدارة DM Lock وإعدادات البوت |
-| `/groupimg` | قفل صورة المجموعة |
-| `/song [اسم]` | تحميل أغنية من YouTube |
-| `/tik [استعلام]` | تحميل فيديو TikTok بدون علامة مائية |
+## Setup
 
-> ⚠️ **مهم:** البوت يتجاهل رسائل غير الأدمن كلياً — لا يرد، لا يسجّل
+1. Add your Facebook cookies in `account.txt` or via the dashboard
+2. Edit `config.json` with your settings
+3. Run with `npm start`
 
----
-
-## التثبيت
-
-```bash
-git clone https://github.com/castrolmocro/DAVI-BOT.git
-cd DAVI-BOT
-npm install
-```
-
-### إضافة الكوكيز
-
-الصق الكوكي في `account.txt` أو من لوحة التحكم.
-
-### الإعداد
-
-عدّل `config.json`:
-
-```json
-{
-  "ownerID": "YOUR_FACEBOOK_ID",
-  "adminIDs": [],
-  "prefix": "/",
-  "dashboard": { "port": 5000, "password": "djamel2025*" }
-}
-```
-
-### التشغيل
-
-```bash
-node index.js
-```
-
-لوحة التحكم: `http://localhost:5000`
-كلمة المرور الافتراضية: `djamel2025*`
-
----
-
-## أنظمة الحماية (16 نظام)
-
-| # | النظام | الوصف |
-|---|--------|-------|
-| 01 | Presence Cycling | تدوير حالة الحضور عشوائياً |
-| 02 | Human Browsing | تصفح فيسبوك بهيدرز حقيقية |
-| 03 | Read Simulation | قراءة الرسائل بتأخير طبيعي |
-| 04 | Sleep Mode | تقليل النشاط في ساعات النوم |
-| 05 | UA Rotation | تدوير User-Agent |
-| 06 | Rate Limiting | تحديد معدل الرسائل |
-| 07 | Outgoing Throttle | تباعد الرسائل الصادرة |
-| 08 | HTTP Fingerprinting | هيدرز Sec-Fetch الواقعية |
-| 09 | Warmup Mode | نشاط محدود في أول 15 دقيقة |
-| 10 | Typing Indicator | عرض "يكتب…" قبل كل رد |
-| 11 | Action Jitter | تأخيرات عشوائية صغيرة |
-| 12 | MQTT Health Check | مراقبة صحة الاتصال |
-| 13 | Keep-Alive Ping | ping دوري للحفاظ على الجلسة |
-| 14 | Cookie Freshness | فحص صحة الكوكي دورياً |
-| 15 | Session Refresher | تحديث AppState تلقائياً |
-| 16 | Anti-Detection | تمويه عملية البوت |
-
----
-
-## هيكل الملفات
+## Architecture
 
 ```
-DAVI-BOT/
-├── index.js              # Watchdog (إعادة تشغيل عند الانهيار)
-├── config.json           # إعدادات البوت
-├── account.txt           # كوكيز فيسبوك
-├── package.json
-├── railway.toml          # إعدادات Railway
-│
-├── src/
-│   ├── index.js          # محرك DjamelBot الرئيسي
-│   ├── handler/
-│   │   └── handlerEvents.js   # معالج الأحداث (تجاهل تام لغير الأدمن)
-│   ├── commands/         # الأوامر التسعة
-│   ├── dashboard/        # Express + Socket.IO
-│   ├── utils/            # قاعدة بيانات، محلل الكوكيز، المحمّل
-│   └── protection/       # 16 نظام حماية
-│
-├── Djamel-fca/           # مكتبة الـ FCA المخصصة
-└── data/                 # قاعدة البيانات SQLite
+index.js (Watchdog)
+└── Goat.js (Main Engine)
+    ├── Djamel-fca/ (Custom FCA Library)
+    ├── src/engine/ (Core, Loader, Handler)
+    ├── src/commands/ (9 Commands)
+    ├── src/protection/ (20 Layers)
+    └── src/dashboard/ (iOS-style Dashboard)
 ```
 
----
+## Author
 
-**Copyright © DJAMEL — DAVID V1 — DjamelBot Engine**
+**DJAMEL** — Built with ❤️ for the community.

@@ -1,763 +1,695 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>DAVID V1 — لوحة التحكم</title>
 <script src="/socket.io/socket.io.js"></script>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#07070f;--sb:#0c0c1e;--panel:#101028;--card:#13132e;
-  --border:#1e1e40;--border2:#252550;
-  --accent:#7c6cfc;--accent2:#00d4ff;--accent3:#a78bfa;
-  --green:#22c55e;--red:#ef4444;--orange:#f97316;--yellow:#eab308;
-  --blue:#3b82f6;--pink:#ec4899;
-  --text:#d0d0e8;--muted:#4a4a72;--muted2:#6a6a9a;
-  --sb-w:230px;--hdr:52px;--r:12px;
+:root {
+  --bg:          #000;
+  --surface:     rgba(255,255,255,0.06);
+  --surface2:    rgba(255,255,255,0.10);
+  --border:      rgba(255,255,255,0.12);
+  --text:        #fff;
+  --text2:       rgba(255,255,255,0.55);
+  --accent:      #0A84FF;
+  --accent2:     #30D158;
+  --accent3:     #FF453A;
+  --accent4:     #FFD60A;
+  --accent5:     #BF5AF2;
+  --blur:        saturate(180%) blur(20px);
+  --r:           18px;
+  --r2:          12px;
+  --shadow:      0 4px 40px rgba(0,0,0,0.5);
 }
-html,body{height:100%;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
-a{color:inherit;text-decoration:none}
-button,input,select,textarea{font-family:inherit}
-::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
-.hidden{display:none!important}
-
-/* ─── LOGIN ─────────────────────────────────────────────── */
-#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;padding:16px}
-.lc{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:40px 32px;width:100%;max-width:380px;text-align:center}
-.lc-icon{font-size:3.5rem;margin-bottom:8px;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
-.lc-title{font-size:1.7rem;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
-.lc-sub{font-size:.75rem;color:var(--muted2);margin-bottom:28px;letter-spacing:.5px}
-.lc input{width:100%;background:#060614;border:1px solid var(--border);border-radius:10px;color:var(--text);padding:12px 16px;font-size:.95rem;outline:none;transition:border .2s,box-shadow .2s;margin-bottom:14px;text-align:center;letter-spacing:3px}
-.lc input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,108,252,.2)}
-.lc-btn{width:100%;padding:13px;border-radius:10px;border:none;font-size:.95rem;font-weight:700;cursor:pointer;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;transition:opacity .2s,transform .1s;letter-spacing:.5px}
-.lc-btn:hover{opacity:.88}
-.lc-btn:active{transform:scale(.98)}
-.lc-err{color:var(--red);font-size:.78rem;margin-top:10px;min-height:20px;transition:opacity .3s}
-.lc-copy{color:var(--muted);font-size:.66rem;margin-top:20px}
-
-/* ─── LAYOUT ─────────────────────────────────────────────── */
-#app{display:flex;min-height:100vh}
-#sidebar{width:var(--sb-w);background:var(--sb);border-left:1px solid var(--border);display:flex;flex-direction:column;position:fixed;right:0;top:0;bottom:0;z-index:100;transition:transform .3s cubic-bezier(.4,0,.2,1)}
-#main{margin-right:var(--sb-w);flex:1;display:flex;flex-direction:column;min-height:100vh}
-#overlay{position:fixed;inset:0;background:#000c;z-index:99;display:none}
-#menu-btn{display:none;position:fixed;top:10px;left:10px;z-index:200;background:var(--panel);border:1px solid var(--border);border-radius:9px;width:38px;height:38px;font-size:1.3rem;cursor:pointer;align-items:center;justify-content:center;color:var(--text)}
-
-/* ─── SIDEBAR ─────────────────────────────────────────────── */
-.sb-header{padding:20px 16px 14px;border-bottom:1px solid var(--border)}
-.sb-logo{display:flex;align-items:center;gap:10px}
-.sb-logo-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
-.sb-logo-text{font-size:1.1rem;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.sb-logo-sub{font-size:.62rem;color:var(--muted2);margin-top:1px}
-
-.sb-status{margin:12px 16px;padding:8px 12px;border-radius:8px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:.78rem}
-.sb-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s,box-shadow .3s}
-.sb-dot.online{background:var(--green);box-shadow:0 0 6px var(--green)}
-.sb-dot.offline{background:var(--red)}
-.sb-dot.connecting{background:var(--orange);animation:blink .8s infinite}
-.sb-dot.degraded{background:var(--yellow)}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-.sb-status-text{color:var(--muted2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-
-.sb-nav{flex:1;overflow-y:auto;padding:8px 10px}
-.sb-nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;cursor:pointer;color:var(--muted2);font-size:.88rem;font-weight:500;transition:all .18s;margin-bottom:2px}
-.sb-nav-item:hover{background:var(--panel);color:var(--text)}
-.sb-nav-item.active{background:rgba(124,108,252,.18);color:var(--accent3);border-left:2px solid var(--accent)}
-.sb-nav-icon{font-size:1rem;width:20px;text-align:center}
-
-.sb-footer{padding:14px 16px;border-top:1px solid var(--border)}
-.sb-footer-row{display:flex;gap:8px}
-.sb-footer-btn{flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted2);font-size:.78rem;cursor:pointer;transition:all .18s}
-.sb-footer-btn:hover{background:var(--panel);color:var(--text);border-color:var(--border2)}
-.sb-footer-btn.danger:hover{background:rgba(239,68,68,.15);color:var(--red);border-color:var(--red)}
-
-/* ─── HEADER ─────────────────────────────────────────────── */
-#header{height:var(--hdr);background:var(--sb);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;position:sticky;top:0;z-index:90}
-.hdr-title{font-size:1rem;font-weight:700;flex:1}
-.hdr-pill{padding:4px 12px;border-radius:99px;font-size:.73rem;font-weight:600;border:1px solid var(--border)}
-.hdr-pill.online{background:rgba(34,197,94,.15);color:var(--green);border-color:rgba(34,197,94,.3)}
-.hdr-pill.offline{background:rgba(239,68,68,.12);color:var(--red);border-color:rgba(239,68,68,.3)}
-.hdr-pill.connecting{background:rgba(249,115,22,.12);color:var(--orange);border-color:rgba(249,115,22,.3)}
-
-/* ─── CONTENT ─────────────────────────────────────────────── */
-#content{padding:20px;flex:1}
-.page{display:none}
-.page.active{display:block}
-
-/* ─── STAT GRID ─────────────────────────────────────────────── */
-.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px;margin-bottom:20px}
-.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:6px;transition:border .2s}
-.stat-card:hover{border-color:var(--border2)}
-.stat-card-icon{font-size:1.5rem;margin-bottom:4px}
-.stat-card-label{font-size:.72rem;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px}
-.stat-card-value{font-size:1.4rem;font-weight:800;color:var(--text)}
-.stat-card-sub{font-size:.72rem;color:var(--muted2)}
-
-/* ─── INFO GRID ─────────────────────────────────────────────── */
-.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
-.info-panel{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px}
-.info-panel-title{font-size:.8rem;font-weight:700;color:var(--muted2);margin-bottom:14px;text-transform:uppercase;letter-spacing:.6px}
-.info-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)}
-.info-row:last-child{border-bottom:none}
-.info-label{font-size:.78rem;color:var(--muted2)}
-.info-val{font-size:.82rem;font-weight:600;color:var(--text)}
-
-/* ─── BUTTONS ─────────────────────────────────────────────── */
-.btn{padding:8px 16px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
-.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
-.btn-primary:hover{opacity:.85}
-.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text)}
-.btn-outline:hover{background:var(--panel);border-color:var(--accent)}
-.btn-danger{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:var(--red)}
-.btn-danger:hover{background:rgba(239,68,68,.25)}
-.btn-success{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:var(--green)}
-.btn-success:hover{background:rgba(34,197,94,.25)}
-.btn-sm{padding:5px 11px;font-size:.75rem}
-.btn-full{width:100%;justify-content:center}
-
-/* ─── PANEL ─────────────────────────────────────────────── */
-.panel{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px}
-.panel-title{font-size:.82rem;font-weight:700;color:var(--muted2);margin-bottom:16px;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:8px}
-.panel-title span{font-size:.9rem}
-
-/* ─── FORM ─────────────────────────────────────────────── */
-.form-group{margin-bottom:14px}
-.form-label{display:block;font-size:.78rem;color:var(--muted2);margin-bottom:6px;font-weight:600}
-.form-input{width:100%;background:#060614;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 12px;font-size:.88rem;outline:none;transition:border .2s}
-.form-input:focus{border-color:var(--accent)}
-textarea.form-input{resize:vertical;min-height:90px;font-family:monospace;font-size:.82rem}
-.form-hint{font-size:.72rem;color:var(--muted);margin-top:4px}
-
-/* ─── LOG CONSOLE ─────────────────────────────────────────────── */
-#log-console{height:400px;overflow-y:auto;background:#030310;border:1px solid var(--border);border-radius:var(--r);padding:12px;font-family:'Courier New',monospace;font-size:.76rem;line-height:1.6}
-.log-line{padding:1px 0;word-break:break-all}
-.log-line.warn{color:var(--yellow)}
-.log-line.error{color:var(--red)}
-.log-line.info{color:var(--accent2)}
-.log-line.log{color:#a0a0c8}
-.log-ts{color:var(--muted);margin-left:8px}
-
-/* ─── MESSAGES ─────────────────────────────────────────────── */
-#msg-feed{height:350px;overflow-y:auto;background:#030310;border:1px solid var(--border);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:6px}
-.msg-item{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px 12px}
-.msg-header{display:flex;gap:8px;margin-bottom:4px;font-size:.72rem}
-.msg-uid{color:var(--accent3);font-weight:700}
-.msg-tid{color:var(--accent2)}
-.msg-ts{color:var(--muted);margin-right:auto}
-.msg-body{font-size:.82rem;color:var(--text);word-break:break-word}
-
-/* ─── SEND FORM ─────────────────────────────────────────────── */
-.send-row{display:flex;gap:8px;margin-top:12px}
-.send-row .form-input{flex:1}
-
-/* ─── ADMIN LIST ─────────────────────────────────────────────── */
-.admin-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
-.admin-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--panel);border:1px solid var(--border);border-radius:9px}
-.admin-icon{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0}
-.admin-id{flex:1;font-size:.82rem;color:var(--text);font-family:monospace}
-.admin-badge{padding:2px 8px;border-radius:99px;font-size:.65rem;font-weight:700}
-.admin-badge.owner{background:rgba(234,179,8,.15);color:var(--yellow);border:1px solid rgba(234,179,8,.3)}
-.admin-badge.admin{background:rgba(124,108,252,.15);color:var(--accent3);border:1px solid rgba(124,108,252,.3)}
-
-/* ─── COMMANDS ─────────────────────────────────────────────── */
-.cmd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
-.cmd-card{background:var(--panel);border:1px solid var(--border);border-radius:9px;padding:12px 16px;transition:border .2s}
-.cmd-card:hover{border-color:var(--accent)}
-.cmd-name{font-size:.9rem;font-weight:700;color:var(--accent3);margin-bottom:4px}
-.cmd-aliases{font-size:.7rem;color:var(--muted2)}
-.cmd-cat{font-size:.65rem;padding:2px 8px;border-radius:99px;background:rgba(0,212,255,.1);color:var(--accent2);border:1px solid rgba(0,212,255,.2);display:inline-block;margin-top:6px}
-
-/* ─── TOAST ─────────────────────────────────────────────── */
-#toast-container{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:9999;pointer-events:none;align-items:center}
-.toast{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:.82rem;font-weight:600;opacity:0;transition:all .3s;pointer-events:none;min-width:200px;text-align:center}
-.toast.show{opacity:1}
-.toast.success{border-color:rgba(34,197,94,.4);color:var(--green)}
-.toast.error{border-color:rgba(239,68,68,.4);color:var(--red)}
-.toast.info{border-color:rgba(124,108,252,.4);color:var(--accent3)}
-
-/* ─── PROGRESS BAR ─────────────────────────────────────────────── */
-.progress-bar-bg{background:var(--border);border-radius:4px;height:8px;overflow:hidden}
-.progress-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .5s}
-
-/* ─── PROTECTION BADGES ─────────────────────────────────────────────── */
-.prot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
-.prot-item{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--panel);border:1px solid rgba(34,197,94,.2);border-radius:8px;font-size:.78rem}
-.prot-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green);flex-shrink:0;animation:blink 2s infinite}
-
-/* ─── RESPONSIVE ─────────────────────────────────────────────── */
-@media(max-width:768px){
-  #sidebar{transform:translateX(var(--sb-w));right:0}
-  #sidebar.open{transform:translateX(0)}
-  #main{margin-right:0}
-  #menu-btn{display:flex}
-  .info-grid{grid-template-columns:1fr}
-  .stat-grid{grid-template-columns:1fr 1fr}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:16px;scroll-behavior:smooth;}
+body{
+  background:#000;
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',system-ui,sans-serif;
+  min-height:100vh;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
 }
-@media(max-width:480px){.stat-grid{grid-template-columns:1fr 1fr}}
+
+/* ── Background ── */
+body::before{
+  content:'';position:fixed;inset:0;z-index:-1;
+  background:radial-gradient(ellipse 80% 50% at 20% -10%,rgba(10,132,255,0.18),transparent),
+             radial-gradient(ellipse 60% 40% at 90% 110%,rgba(191,90,242,0.15),transparent),
+             radial-gradient(ellipse 50% 60% at 50% 50%,rgba(48,209,88,0.04),transparent),
+             #000;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:9px;}
+
+/* ── Header ── */
+.header{
+  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px env(safe-area-inset-top) 20px;
+  background:rgba(0,0,0,0.7);
+  -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
+  border-bottom:1px solid var(--border);
+}
+.header-logo{display:flex;align-items:center;gap:12px;}
+.header-logo .icon{
+  width:38px;height:38px;border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),var(--accent5));
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:700;color:#fff;
+  box-shadow:0 0 20px rgba(10,132,255,0.4);
+}
+.header-logo h1{font-size:18px;font-weight:700;letter-spacing:-.3px;}
+.header-logo span{display:block;font-size:11px;color:var(--text2);font-weight:500;}
+.header-right{display:flex;align-items:center;gap:10px;}
+.status-pill{
+  display:flex;align-items:center;gap:6px;
+  padding:5px 12px;border-radius:20px;
+  font-size:12px;font-weight:600;letter-spacing:.2px;
+  transition:all .3s ease;
+}
+.status-pill.online {background:rgba(48,209,88,0.15);color:var(--accent2);}
+.status-pill.offline{background:rgba(255,69,58,0.15);color:var(--accent3);}
+.status-pill.connecting{background:rgba(255,214,10,0.15);color:var(--accent4);}
+.status-pill .dot{width:7px;height:7px;border-radius:50%;animation:pulse 2s infinite;}
+.status-pill.online .dot {background:var(--accent2);}
+.status-pill.offline .dot{background:var(--accent3);animation:none;}
+.status-pill.connecting .dot{background:var(--accent4);}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.85);}}
+
+/* ── Layout ── */
+.main{max-width:900px;margin:0 auto;padding:20px 16px;}
+
+/* ── Cards ── */
+.card{
+  background:var(--surface);
+  -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:20px;
+  box-shadow:var(--shadow);
+}
+.card-title{font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:16px;}
+
+/* ── Stats Grid ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+@media(max-width:600px){.stats-grid{grid-template-columns:repeat(2,1fr);}}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);
+  padding:16px 12px;text-align:center;
+  transition:transform .2s,background .2s;cursor:default;
+}
+.stat-card:hover{background:var(--surface2);transform:translateY(-2px);}
+.stat-value{font-size:26px;font-weight:700;line-height:1.1;}
+.stat-label{font-size:11px;color:var(--text2);margin-top:4px;font-weight:500;}
+.stat-icon{font-size:20px;margin-bottom:6px;}
+.c-blue   .stat-value{color:var(--accent);}
+.c-green  .stat-value{color:var(--accent2);}
+.c-purple .stat-value{color:var(--accent5);}
+.c-yellow .stat-value{color:var(--accent4);}
+.c-red    .stat-value{color:var(--accent3);}
+.c-cyan   .stat-value{color:#5AC8F5;}
+.c-orange .stat-value{color:#FF9F0A;}
+.c-pink   .stat-value{color:#FF375F;}
+
+/* ── Bot Info ── */
+.bot-info{
+  display:flex;align-items:center;gap:16px;
+  margin-bottom:16px;
+}
+.bot-avatar{
+  width:64px;height:64px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent5));
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;font-weight:700;flex-shrink:0;
+  box-shadow:0 0 30px rgba(10,132,255,0.35);
+}
+.bot-details h2{font-size:20px;font-weight:700;}
+.bot-details p {font-size:13px;color:var(--text2);margin-top:2px;}
+.bot-details .uid{font-size:11px;color:var(--text2);font-family:monospace;margin-top:4px;}
+
+/* ── Uptime bar ── */
+.uptime-bar{display:flex;gap:4px;flex-wrap:wrap;margin-top:12px;}
+.uptime-seg{width:6px;height:24px;border-radius:3px;background:var(--accent2);opacity:.5;}
+.uptime-seg.active{opacity:1;}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:2px;}
+.tab{
+  padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;
+  border:none;background:var(--surface);color:var(--text2);
+  transition:all .2s;white-space:nowrap;
+  -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
+  border:1px solid var(--border);
+}
+.tab:hover{background:var(--surface2);}
+.tab.active{background:var(--accent);color:#fff;border-color:transparent;box-shadow:0 4px 16px rgba(10,132,255,0.4);}
+.tab-pane{display:none;animation:fadeIn .2s ease;}
+.tab-pane.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── Cookie Form ── */
+.form-group{margin-bottom:14px;}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+textarea,input[type=text],input[type=password],input[type=number]{
+  width:100%;background:rgba(255,255,255,0.06);
+  border:1px solid var(--border);border-radius:var(--r2);
+  color:var(--text);font-size:14px;padding:10px 14px;
+  font-family:inherit;outline:none;resize:vertical;
+  transition:border-color .2s;
+}
+textarea:focus,input:focus{border-color:var(--accent);background:rgba(255,255,255,0.08);}
+textarea{min-height:120px;font-family:monospace;font-size:12px;}
+.hint{font-size:11px;color:var(--text2);margin-top:4px;}
+
+/* ── Buttons ── */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:10px 20px;border-radius:var(--r2);font-size:14px;font-weight:600;
+  border:none;cursor:pointer;transition:all .2s;font-family:inherit;
+}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 16px rgba(10,132,255,0.35);}
+.btn-primary:hover{background:#228bf5;}
+.btn-success{background:var(--accent2);color:#000;}
+.btn-success:hover{filter:brightness(1.1);}
+.btn-danger {background:var(--accent3);color:#fff;box-shadow:0 4px 16px rgba(255,69,58,.3);}
+.btn-danger:hover{filter:brightness(1.1);}
+.btn-ghost {background:var(--surface);color:var(--text);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--surface2);}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+
+/* ── Commands list ── */
+.cmd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
+.cmd-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);
+  padding:14px;
+}
+.cmd-card .cmd-name{font-size:15px;font-weight:700;color:var(--accent);}
+.cmd-card .cmd-cat {font-size:11px;color:var(--text2);margin-top:2px;text-transform:uppercase;letter-spacing:.4px;}
+.cmd-card .cmd-desc{font-size:12px;color:var(--text2);margin-top:6px;}
+.cmd-badge{
+  display:inline-block;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700;
+  margin-top:6px;
+}
+.role-2{background:rgba(10,132,255,.15);color:var(--accent);}
+.role-3{background:rgba(255,214,10,.15);color:var(--accent4);}
+
+/* ── Messages log ── */
+.msg-log{max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;}
+.msg-item{
+  background:var(--surface);border-radius:10px;padding:8px 12px;
+  font-size:12px;border-left:3px solid var(--accent);
+}
+.msg-item .msg-body{color:var(--text);font-weight:500;}
+.msg-item .msg-meta{color:var(--text2);font-size:10px;margin-top:2px;}
+
+/* ── Toast ── */
+#toast-container{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:center;}
+.toast{
+  background:rgba(30,30,30,.95);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
+  border:1px solid var(--border);border-radius:14px;
+  padding:10px 20px;font-size:13px;font-weight:600;color:#fff;
+  animation:toastIn .3s ease;box-shadow:0 8px 30px rgba(0,0,0,.5);
+}
+.toast.success{border-color:var(--accent2);color:var(--accent2);}
+.toast.error  {border-color:var(--accent3);color:var(--accent3);}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── Protection pills ── */
+.prot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;}
+.prot-pill{
+  display:flex;align-items:center;gap:8px;
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:10px 12px;font-size:12px;font-weight:600;
+}
+.prot-pill .p-dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);flex-shrink:0;animation:pulse 2.5s infinite;}
+
+/* ── Section spacer ── */
+.section{margin-bottom:16px;}
+
+/* ── Toggle ── */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);}
+.toggle-row:last-child{border-bottom:none;}
+.toggle-info{flex:1;}
+.toggle-info .t-label{font-size:14px;font-weight:600;}
+.toggle-info .t-desc {font-size:12px;color:var(--text2);margin-top:2px;}
+.switch{position:relative;display:inline-block;width:48px;height:28px;flex-shrink:0;}
+.switch input{opacity:0;width:0;height:0;}
+.slider{position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,.15);border-radius:28px;transition:.3s;}
+.slider::before{content:'';position:absolute;width:22px;height:22px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.3s;box-shadow:0 2px 6px rgba(0,0,0,.3);}
+input:checked+.slider{background:var(--accent2);}
+input:checked+.slider::before{transform:translateX(20px);}
+
+/* ── Config save btn ── */
+.save-fab{
+  position:fixed;bottom:28px;left:28px;
+  background:var(--accent);color:#fff;
+  border:none;border-radius:16px;padding:14px 22px;
+  font-size:14px;font-weight:700;cursor:pointer;
+  box-shadow:0 8px 30px rgba(10,132,255,.45);
+  display:none;z-index:200;align-items:center;gap:8px;
+  transition:all .2s;
+}
+.save-fab.visible{display:flex;}
+.save-fab:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(10,132,255,.5);}
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="login-screen">
-  <div class="lc">
-    <div class="lc-icon">🤖</div>
-    <div class="lc-title">DAVID V1</div>
-    <div class="lc-sub">DjamelBot Engine — لوحة التحكم</div>
-    <input id="pass-input" type="password" placeholder="كلمة المرور" autocomplete="current-password"/>
-    <button class="lc-btn" onclick="doLogin()">🔐 دخول</button>
-    <div class="lc-err" id="login-err"></div>
-    <div class="lc-copy">Copyright © DJAMEL — All rights reserved</div>
+<!-- Header -->
+<header class="header">
+  <div class="header-logo">
+    <div class="icon">D</div>
+    <div>
+      <h1>DAVID V1</h1>
+      <span>DjamelBot Engine — By DJAMEL</span>
+    </div>
   </div>
-</div>
+  <div class="header-right">
+    <div class="status-pill offline" id="statusPill">
+      <div class="dot"></div>
+      <span id="statusText">غير متصل</span>
+    </div>
+  </div>
+</header>
 
-<!-- TOAST -->
+<!-- Main -->
+<div class="main">
+
+  <!-- Bot Info Card -->
+  <div class="card section">
+    <div class="bot-info">
+      <div class="bot-avatar" id="botAvatar">D</div>
+      <div class="bot-details">
+        <h2 id="botName">DAVID V1</h2>
+        <p id="botStatus">جاري التحميل…</p>
+        <p class="uid" id="botUID">—</p>
+      </div>
+    </div>
+    <!-- Mini uptime bar -->
+    <div class="uptime-bar" id="uptimeBar">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="stats-grid section">
+    <div class="stat-card c-blue">
+      <div class="stat-icon">💬</div>
+      <div class="stat-value" id="s-messages">0</div>
+      <div class="stat-label">رسائل استُقبلت</div>
+    </div>
+    <div class="stat-card c-green">
+      <div class="stat-icon">⚡</div>
+      <div class="stat-value" id="s-commands">0</div>
+      <div class="stat-label">أوامر نُفّذت</div>
+    </div>
+    <div class="stat-card c-purple">
+      <div class="stat-icon">👥</div>
+      <div class="stat-value" id="s-threads">0</div>
+      <div class="stat-label">غروبات نشطة</div>
+    </div>
+    <div class="stat-card c-yellow">
+      <div class="stat-icon">👤</div>
+      <div class="stat-value" id="s-users">0</div>
+      <div class="stat-label">مستخدمون</div>
+    </div>
+    <div class="stat-card c-cyan">
+      <div class="stat-icon">⏱</div>
+      <div class="stat-value" id="s-uptime">—</div>
+      <div class="stat-label">وقت التشغيل</div>
+    </div>
+    <div class="stat-card c-orange">
+      <div class="stat-icon">📦</div>
+      <div class="stat-value" id="s-commands-count">9</div>
+      <div class="stat-label">عدد الأوامر</div>
+    </div>
+    <div class="stat-card c-green">
+      <div class="stat-icon">🛡</div>
+      <div class="stat-value" id="s-protection">20</div>
+      <div class="stat-label">طبقات الحماية</div>
+    </div>
+    <div class="stat-card c-pink">
+      <div class="stat-icon">💾</div>
+      <div class="stat-value" id="s-ram">—</div>
+      <div class="stat-label">RAM (MB)</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-tab="control">🎮 التحكم</button>
+    <button class="tab" data-tab="cookies">🍪 الكوكيز</button>
+    <button class="tab" data-tab="commands">📦 الأوامر</button>
+    <button class="tab" data-tab="protection">🛡 الحماية</button>
+    <button class="tab" data-tab="settings">⚙️ الإعدادات</button>
+    <button class="tab" data-tab="messages">📨 الرسائل</button>
+  </div>
+
+  <!-- ─── Tab: Control ──────────────────────────────────────────── -->
+  <div class="tab-pane active" id="tab-control">
+    <div class="card section">
+      <div class="card-title">التحكم بالبوت</div>
+      <div class="btn-row">
+        <button class="btn btn-success" onclick="controlBot('restart')">🔄 إعادة التشغيل</button>
+        <button class="btn btn-danger"  onclick="controlBot('stop')">⏹ إيقاف</button>
+        <button class="btn btn-ghost"   onclick="refreshStats()">📊 تحديث الإحصائيات</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Tab: Cookies ─────────────────────────────────────────── -->
+  <div class="tab-pane" id="tab-cookies">
+    <div class="card">
+      <div class="card-title">رفع الكوكيز</div>
+      <div class="form-group">
+        <label>الكوكيز (JSON / c3c / Netscape / Header String)</label>
+        <textarea id="cookieInput" placeholder='[{"key":"c_user","value":"...","domain":".facebook.com",...}]&#10;أو الصق الكوكيز بأي صيغة'></textarea>
+        <div class="hint">✅ يدعم JSON Array، c3c format، Netscape headers، وصيغة key=value</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="uploadCookies()">📤 رفع وتسجيل الدخول</button>
+        <button class="btn btn-ghost"   onclick="clearCookies()">🗑 مسح</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Tab: Commands ────────────────────────────────────────── -->
+  <div class="tab-pane" id="tab-commands">
+    <div class="card">
+      <div class="card-title">قائمة الأوامر (<span id="cmdTotal">9</span>)</div>
+      <div class="cmd-grid" id="cmdGrid">
+        <!-- filled by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Tab: Protection ──────────────────────────────────────── -->
+  <div class="tab-pane" id="tab-protection">
+    <div class="card">
+      <div class="card-title">🛡 20 نظام حماية — جميعها نشطة</div>
+      <div class="prot-grid" id="protGrid">
+        <!-- filled by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Tab: Settings ────────────────────────────────────────── -->
+  <div class="tab-pane" id="tab-settings">
+    <div class="card">
+      <div class="card-title">الإعدادات العامة</div>
+
+      <div class="form-group">
+        <label>Prefix (بادئة الأوامر)</label>
+        <input type="text" id="cfg-prefix" value="/" maxlength="3">
+      </div>
+      <div class="form-group">
+        <label>اسم البوت</label>
+        <input type="text" id="cfg-botName" value="DAVID V1">
+      </div>
+      <div class="form-group">
+        <label>معرف المالك (ownerID)</label>
+        <input type="text" id="cfg-ownerID" placeholder="100012345678">
+      </div>
+
+      <div class="card-title" style="margin-top:16px;">أنظمة الحماية</div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="t-label">وضع التخفي (Stealth)</div>
+          <div class="t-desc">محاكاة تصفح بشري + تدوير User-Agent</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="cfg-stealth" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="t-label">Keep Alive</div>
+          <div class="t-desc">ping دوري للحفاظ على الجلسة</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="cfg-keepalive" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="t-label">MQTT Health Check</div>
+          <div class="t-desc">إعادة الاتصال تلقائياً عند الانقطاع</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="cfg-mqtt" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="t-label">Admin Only Mode</div>
+          <div class="t-desc">البوت يرد على الأدمن فقط</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="cfg-adminonly"><span class="slider"></span></label>
+      </div>
+
+      <div style="margin-top:16px;">
+        <button class="btn btn-primary" onclick="saveSettings()">💾 حفظ الإعدادات</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Tab: Messages ────────────────────────────────────────── -->
+  <div class="tab-pane" id="tab-messages">
+    <div class="card">
+      <div class="card-title">آخر الرسائل المستقبلة</div>
+      <div class="msg-log" id="msgLog">
+        <div class="msg-item">
+          <div class="msg-body" style="color:var(--text2)">لا توجد رسائل بعد…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- Toast container -->
 <div id="toast-container"></div>
 
-<!-- MENU BUTTON -->
-<button id="menu-btn" onclick="toggleSidebar()">☰</button>
-<div id="overlay" onclick="closeSidebar()"></div>
-
-<!-- APP -->
-<div id="app" class="hidden">
-
-  <!-- SIDEBAR -->
-  <div id="sidebar">
-    <div class="sb-header">
-      <div class="sb-logo">
-        <div class="sb-logo-icon">🤖</div>
-        <div>
-          <div class="sb-logo-text">DAVID V1</div>
-          <div class="sb-logo-sub">DjamelBot Engine</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="sb-status">
-      <div class="sb-dot" id="sb-dot"></div>
-      <div class="sb-status-text" id="sb-status-text">جارٍ الاتصال…</div>
-    </div>
-
-    <nav class="sb-nav">
-      <div class="sb-nav-item active" data-page="overview" onclick="showPage('overview',this)">
-        <span class="sb-nav-icon">📊</span> نظرة عامة
-      </div>
-      <div class="sb-nav-item" data-page="logs" onclick="showPage('logs',this)">
-        <span class="sb-nav-icon">📋</span> السجلات
-      </div>
-      <div class="sb-nav-item" data-page="messages" onclick="showPage('messages',this)">
-        <span class="sb-nav-icon">💬</span> الرسائل
-      </div>
-      <div class="sb-nav-item" data-page="commands" onclick="showPage('commands',this)">
-        <span class="sb-nav-icon">⚡</span> الأوامر
-      </div>
-      <div class="sb-nav-item" data-page="protection" onclick="showPage('protection',this)">
-        <span class="sb-nav-icon">🛡️</span> الحماية
-      </div>
-      <div class="sb-nav-item" data-page="admins" onclick="showPage('admins',this)">
-        <span class="sb-nav-icon">👑</span> الأدمن
-      </div>
-      <div class="sb-nav-item" data-page="cookie" onclick="showPage('cookie',this)">
-        <span class="sb-nav-icon">🍪</span> الكوكيز
-      </div>
-      <div class="sb-nav-item" data-page="send" onclick="showPage('send',this)">
-        <span class="sb-nav-icon">📤</span> إرسال رسالة
-      </div>
-    </nav>
-
-    <div class="sb-footer">
-      <div class="sb-footer-row">
-        <button class="sb-footer-btn" onclick="restartBot()">🔄 إعادة تشغيل</button>
-        <button class="sb-footer-btn danger" onclick="doLogout()">🚪 خروج</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MAIN -->
-  <div id="main">
-    <div id="header">
-      <div style="width:32px"></div>
-      <div class="hdr-title" id="hdr-title">📊 نظرة عامة</div>
-      <div class="hdr-pill offline" id="hdr-pill">● غير متصل</div>
-    </div>
-
-    <div id="content">
-
-      <!-- OVERVIEW PAGE -->
-      <div class="page active" id="page-overview">
-        <div class="stat-grid" id="stat-grid">
-          <div class="stat-card"><div class="stat-card-icon">⏱️</div><div class="stat-card-label">وقت التشغيل</div><div class="stat-card-value" id="st-uptime">—</div></div>
-          <div class="stat-card"><div class="stat-card-icon">⚡</div><div class="stat-card-label">الأوامر</div><div class="stat-card-value" id="st-cmds">—</div></div>
-          <div class="stat-card"><div class="stat-card-icon">👑</div><div class="stat-card-label">الأدمن</div><div class="stat-card-value" id="st-admins">—</div></div>
-          <div class="stat-card"><div class="stat-card-icon">🛡️</div><div class="stat-card-label">الحماية</div><div class="stat-card-value" id="st-prot">16</div></div>
-          <div class="stat-card"><div class="stat-card-icon">🧠</div><div class="stat-card-label">RAM Heap</div><div class="stat-card-value" id="st-heap">—</div></div>
-          <div class="stat-card"><div class="stat-card-icon">🖥️</div><div class="stat-card-label">RAM System</div><div class="stat-card-value" id="st-sys">—</div></div>
-        </div>
-
-        <div class="info-grid">
-          <div class="info-panel">
-            <div class="info-panel-title"><span>🤖</span> معلومات البوت</div>
-            <div class="info-row"><span class="info-label">الاسم</span><span class="info-val" id="inf-name">DAVID V1</span></div>
-            <div class="info-row"><span class="info-label">الإصدار</span><span class="info-val" id="inf-ver">1.0.0</span></div>
-            <div class="info-row"><span class="info-label">المطور</span><span class="info-val">DJAMEL</span></div>
-            <div class="info-row"><span class="info-label">المحرك</span><span class="info-val">DjamelBot</span></div>
-            <div class="info-row"><span class="info-label">المكتبة</span><span class="info-val">Djamel-fca</span></div>
-            <div class="info-row"><span class="info-label">البادئة</span><span class="info-val" id="inf-prefix">/</span></div>
-          </div>
-          <div class="info-panel">
-            <div class="info-panel-title"><span>⚙️</span> حالة النظام</div>
-            <div class="info-row"><span class="info-label">الاتصال</span><span class="info-val" id="inf-conn">—</span></div>
-            <div class="info-row"><span class="info-label">الكوكيز</span><span class="info-val" id="inf-cookie">—</span></div>
-            <div class="info-row"><span class="info-label">Owner ID</span><span class="info-val" id="inf-owner">—</span></div>
-            <div class="info-row"><span class="info-label">Heap Used</span><span class="info-val" id="inf-heap">—</span></div>
-            <div class="info-row"><span class="info-label">Heap Total</span><span class="info-val" id="inf-heapt">—</span></div>
-            <div class="info-row"><span class="info-label">System RAM</span><span class="info-val" id="inf-sysram">—</span></div>
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-title"><span>📊</span> إحصائيات قاعدة البيانات</div>
-          <div class="stat-grid">
-            <div class="stat-card"><div class="stat-card-icon">👥</div><div class="stat-card-label">المستخدمون</div><div class="stat-card-value" id="db-users">—</div></div>
-            <div class="stat-card"><div class="stat-card-icon">💬</div><div class="stat-card-label">المجموعات</div><div class="stat-card-value" id="db-threads">—</div></div>
-            <div class="stat-card"><div class="stat-card-icon">⚡</div><div class="stat-card-label">الأوامر المنفذة</div><div class="stat-card-value" id="db-cmds">—</div></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- LOGS PAGE -->
-      <div class="page" id="page-logs">
-        <div class="panel">
-          <div class="panel-title"><span>📋</span> سجلات البوت الحية</div>
-          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-            <button class="btn btn-outline btn-sm" onclick="clearLogs()">🗑️ مسح</button>
-            <button class="btn btn-outline btn-sm" onclick="scrollLogsBottom()">⬇️ الأسفل</button>
-            <label style="display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted2);cursor:pointer">
-              <input type="checkbox" id="auto-scroll" checked style="accent-color:var(--accent)"/>
-              تمرير تلقائي
-            </label>
-          </div>
-          <div id="log-console"></div>
-        </div>
-      </div>
-
-      <!-- MESSAGES PAGE -->
-      <div class="page" id="page-messages">
-        <div class="panel">
-          <div class="panel-title"><span>💬</span> الرسائل الواردة (للأدمن فقط)</div>
-          <div id="msg-feed"></div>
-        </div>
-      </div>
-
-      <!-- COMMANDS PAGE -->
-      <div class="page" id="page-commands">
-        <div class="panel">
-          <div class="panel-title"><span>⚡</span> الأوامر المتاحة</div>
-          <div class="cmd-grid" id="cmd-grid">
-            <div style="color:var(--muted2);font-size:.82rem">جارٍ التحميل…</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PROTECTION PAGE -->
-      <div class="page" id="page-protection">
-        <div class="panel">
-          <div class="panel-title"><span>🛡️</span> أنظمة الحماية (16 نظام)</div>
-          <div class="prot-grid">
-            <div class="prot-item"><span class="prot-dot"></span> Presence Cycling (L1)</div>
-            <div class="prot-item"><span class="prot-dot"></span> Human Read Receipt (L2)</div>
-            <div class="prot-item"><span class="prot-dot"></span> Natural Presence (L3)</div>
-            <div class="prot-item"><span class="prot-dot"></span> Sleep Mode (L4)</div>
-            <div class="prot-item"><span class="prot-dot"></span> UA Rotation (L5)</div>
-            <div class="prot-item"><span class="prot-dot"></span> Rate Limiting (L6)</div>
-            <div class="prot-item"><span class="prot-dot"></span> Outgoing Throttle (L7)</div>
-            <div class="prot-item"><span class="prot-dot"></span> Connection Jitter (L8)</div>
-            <div class="prot-item"><span class="prot-dot"></span> Duplicate Guard (L9)</div>
-            <div class="prot-item"><span class="prot-dot"></span> Human Typing (L10)</div>
-            <div class="prot-item"><span class="prot-dot"></span> Action Jitter (L11)</div>
-            <div class="prot-item"><span class="prot-dot"></span> MQTT Health Check (L12)</div>
-            <div class="prot-item"><span class="prot-dot"></span> Keep-Alive Ping (L13)</div>
-            <div class="prot-item"><span class="prot-dot"></span> Cookie Freshness (L14)</div>
-            <div class="prot-item"><span class="prot-dot"></span> Session Refresher (L15)</div>
-            <div class="prot-item"><span class="prot-dot"></span> Anti-Detection (L16)</div>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-title"><span>📡</span> معلومات إضافية</div>
-          <div class="info-row"><span class="info-label">نوع الاتصال</span><span class="info-val">MQTT → Long-Poll → Custom Poller</span></div>
-          <div class="info-row"><span class="info-label">محاولات MQTT</span><span class="info-val">4 محاولات قبل التبديل</span></div>
-          <div class="info-row"><span class="info-label">محاولات Long-Poll</span><span class="info-val">3 محاولات قبل Custom Poller</span></div>
-          <div class="info-row"><span class="info-label">Admin Filter</span><span class="info-val">تجاهل تام لغير الأدمن ✔</span></div>
-        </div>
-      </div>
-
-      <!-- ADMINS PAGE -->
-      <div class="page" id="page-admins">
-        <div class="panel">
-          <div class="panel-title"><span>👑</span> الأدمن والمالك</div>
-          <div class="admin-list" id="admin-list"></div>
-          <div class="panel-title"><span>➕</span> إضافة أدمن</div>
-          <div class="form-group">
-            <label class="form-label">Facebook ID الخاص بالأدمن</label>
-            <input id="add-admin-input" type="text" class="form-input" placeholder="مثال: 100012345678"/>
-          </div>
-          <button class="btn btn-primary" onclick="addAdmin()">➕ إضافة</button>
-        </div>
-        <div class="panel">
-          <div class="panel-title"><span>🔑</span> تعيين المالك (Owner)</div>
-          <div class="form-group">
-            <label class="form-label">Owner Facebook ID</label>
-            <input id="owner-input" type="text" class="form-input" placeholder="مثال: 100012345678"/>
-            <div class="form-hint">⚠️ المالك يملك كامل الصلاحيات</div>
-          </div>
-          <button class="btn btn-primary" onclick="setOwner()">💾 حفظ</button>
-        </div>
-      </div>
-
-      <!-- COOKIE PAGE -->
-      <div class="page" id="page-cookie">
-        <div class="panel">
-          <div class="panel-title"><span>🍪</span> رفع كوكيز فيسبوك</div>
-          <div class="form-group">
-            <label class="form-label">الكوكي (JSON أو نص Cookie)</label>
-            <textarea id="cookie-input" class="form-input" placeholder='الصق الكوكي هنا...'></textarea>
-            <div class="form-hint">يدعم: JSON Array | Cookie String | Netscape format</div>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-primary" onclick="saveCookie()">💾 حفظ وإعادة تشغيل</button>
-            <button class="btn btn-outline" onclick="loadCookie()">📖 تحميل الحالي</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- SEND PAGE -->
-      <div class="page" id="page-send">
-        <div class="panel">
-          <div class="panel-title"><span>📤</span> إرسال رسالة مباشرة</div>
-          <div class="form-group">
-            <label class="form-label">Thread ID أو User ID</label>
-            <input id="send-thread" type="text" class="form-input" placeholder="مثال: 100012345678"/>
-          </div>
-          <div class="form-group">
-            <label class="form-label">الرسالة</label>
-            <textarea id="send-msg" class="form-input" placeholder="اكتب رسالتك هنا…"></textarea>
-          </div>
-          <button class="btn btn-primary" onclick="sendMsg()">📤 إرسال</button>
-        </div>
-      </div>
-
-    </div><!-- /content -->
-  </div><!-- /main -->
-</div><!-- /app -->
-
 <script>
-// ─── State ────────────────────────────────────────────────────────────────────
-let TOKEN  = localStorage.getItem("david_token") || "";
-let socket = null;
-let botStatus = "offline";
+// ── Socket.io ────────────────────────────────────────────────────────────────
+const socket = io();
 
-// ─── Toast ────────────────────────────────────────────────────────────────────
-function toast(msg, type = "info", dur = 3000) {
-  const c = document.getElementById("toast-container");
-  const el = document.createElement("div");
-  el.className = `toast ${type}`;
-  el.textContent = msg;
-  c.appendChild(el);
-  requestAnimationFrame(() => { el.classList.add("show"); });
-  setTimeout(() => { el.classList.remove("show"); setTimeout(() => el.remove(), 350); }, dur);
+socket.on("connect",    () => {});
+socket.on("disconnect", () => setStatus("offline", "انقطع الاتصال بالخادم"));
+socket.on("bot-status", d => {
+  const s = d.status || "offline";
+  setStatus(s, d.message || "");
+});
+socket.on("stats-update", d => renderStats(d));
+
+// ── Status Pill ──────────────────────────────────────────────────────────────
+function setStatus(s, msg) {
+  const pill = document.getElementById("statusPill");
+  const txt  = document.getElementById("statusText");
+  const bst  = document.getElementById("botStatus");
+  pill.className = "status-pill " + s;
+  txt.textContent = s === "online" ? "متصل" : s === "connecting" ? "جاري الاتصال…" : "غير متصل";
+  if (bst && msg) bst.textContent = msg;
 }
 
-// ─── API ──────────────────────────────────────────────────────────────────────
-async function api(method, url, body) {
+// ── Stats Render ─────────────────────────────────────────────────────────────
+function fmtUptime(ms) {
+  if (!ms) return "—";
+  const s = Math.floor(ms/1000), m = Math.floor(s/60), h = Math.floor(m/60), d = Math.floor(h/24);
+  if (d)        return `${d}ي ${h%24}س`;
+  if (h)        return `${h}س ${m%60}د`;
+  if (m)        return `${m}:${String(s%60).padStart(2,"0")}`;
+  return `${s}s`;
+}
+
+function renderStats(d) {
+  if (!d) return;
+  setText("s-messages",       d.totalMessages   || 0);
+  setText("s-commands",       d.totalCommands   || 0);
+  setText("s-threads",        d.activeThreads   || 0);
+  setText("s-users",          d.activeUsers     || 0);
+  setText("s-uptime",         fmtUptime(d.uptime));
+  setText("s-commands-count", d.commands        || 9);
+  setText("s-protection",     d.protection      || 20);
+  setText("s-ram",            (d.memMB || 0) + "");
+  if (d.botID && d.botID !== "—") {
+    setText("botUID", "UID: " + d.botID);
+  }
+  if (d.botName) setText("botName", d.botName);
+  renderUptimeBar(d.uptime || 0);
+}
+function setText(id, v) {
+  const el = document.getElementById(id);
+  if (el && el.textContent !== String(v)) el.textContent = v;
+}
+
+function renderUptimeBar(ms) {
+  const bar = document.getElementById("uptimeBar");
+  if (!bar) return;
+  const segs = 24; bar.innerHTML = "";
+  const hours = Math.floor(ms / 3600000);
+  for (let i = 0; i < segs; i++) {
+    const seg = document.createElement("div");
+    seg.className = "uptime-seg" + (i < Math.min(hours, segs) ? " active" : "");
+    bar.appendChild(seg);
+  }
+}
+
+// ── API Calls ─────────────────────────────────────────────────────────────────
+async function apiFetch(url, opts = {}) {
   try {
-    const opts = { method, headers: { "Content-Type": "application/json", "Authorization": TOKEN } };
-    if (body) opts.body = JSON.stringify(body);
-    const r = await fetch(url, opts);
-    const d = await r.json();
-    return { ok: r.ok, data: d };
-  } catch (e) { return { ok: false, data: { error: e.message } }; }
+    const r = await fetch(url, { headers: { "Content-Type": "application/json" }, ...opts });
+    return await r.json();
+  } catch (e) { return { ok: false, error: e.message }; }
 }
 
-// ─── Login ────────────────────────────────────────────────────────────────────
-async function doLogin() {
-  const pass = document.getElementById("pass-input").value.trim();
-  if (!pass) return document.getElementById("login-err").textContent = "أدخل كلمة المرور";
-  const { ok, data } = await api("POST", "/api/login", { password: pass });
-  if (!ok || !data.token) { document.getElementById("login-err").textContent = data.error || "خطأ"; return; }
-  TOKEN = data.token;
-  localStorage.setItem("david_token", TOKEN);
-  showApp();
+async function refreshStats() {
+  const d = await apiFetch("/api/stats");
+  if (d) renderStats(d);
 }
 
-document.getElementById("pass-input").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+async function uploadCookies() {
+  const raw = document.getElementById("cookieInput").value.trim();
+  if (!raw) { toast("اكتب الكوكيز أولاً", "error"); return; }
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = "⏳ جاري الرفع…";
+  const d = await apiFetch("/api/cookies", { method: "POST", body: JSON.stringify({ cookies: raw }) });
+  btn.disabled = false; btn.textContent = "📤 رفع وتسجيل الدخول";
+  if (d.ok) { toast(`✅ تم رفع ${d.count} كوكي — جاري تسجيل الدخول…`, "success"); setStatus("connecting", "جاري تسجيل الدخول…"); }
+  else       toast("❌ " + (d.error || "فشل"), "error");
+}
+function clearCookies() { document.getElementById("cookieInput").value = ""; }
 
-async function doLogout() {
-  await api("POST", "/api/logout");
-  TOKEN = "";
-  localStorage.removeItem("david_token");
-  location.reload();
+async function controlBot(action) {
+  if (action === "stop" && !confirm("⚠️ هل أنت متأكد من إيقاف البوت؟")) return;
+  const d = await apiFetch("/api/control", { method: "POST", body: JSON.stringify({ action }) });
+  if (d.ok) {
+    if (action === "restart") { toast("🔄 جاري إعادة التشغيل…", "success"); setStatus("connecting","إعادة تشغيل…"); }
+    else                       toast("⏹ تم إيقاف البوت.", "error");
+  } else toast("❌ " + (d.error || "فشل"), "error");
 }
 
-// ─── App startup ──────────────────────────────────────────────────────────────
-async function checkAuth() {
-  if (!TOKEN) return;
-  const { ok } = await api("GET", "/api/stats");
-  if (ok) showApp();
-  else { TOKEN = ""; localStorage.removeItem("david_token"); }
-}
-
-function showApp() {
-  document.getElementById("login-screen").classList.add("hidden");
-  document.getElementById("app").classList.remove("hidden");
-  initSocket();
-  loadStats();
-  loadDbStats();
-  loadCommands();
-  loadAdmins();
-}
-
-// ─── Socket.IO ────────────────────────────────────────────────────────────────
-function initSocket() {
-  socket = io({ auth: { token: TOKEN }, query: { token: TOKEN } });
-
-  socket.on("connect", () => updateBotDot("connecting", "جارٍ الاتصال…"));
-  socket.on("disconnect", () => updateBotDot("offline", "انقطع الاتصال"));
-
-  socket.on("bot-status", ({ status, message }) => {
-    botStatus = status;
-    updateBotDot(status, message || status);
-    const pill = document.getElementById("hdr-pill");
-    pill.className = `hdr-pill ${status}`;
-    pill.textContent = `● ${status === "online" ? "متصل" : status === "connecting" ? "جارٍ الاتصال" : "غير متصل"}`;
-    if (document.getElementById("inf-conn")) document.getElementById("inf-conn").textContent = message || status;
-  });
-
-  socket.on("log", entry => appendLog(entry));
-  socket.on("log-history", entries => { document.getElementById("log-console").innerHTML = ""; entries.forEach(appendLog); });
-
-  socket.on("message", msg => appendMsg(msg));
-  socket.on("message-history", msgs => { msgs.forEach(appendMsg); });
-
-  socket.on("connect_error", () => updateBotDot("offline", "خطأ في اتصال Socket"));
-}
-
-function updateBotDot(status, text) {
-  const dot = document.getElementById("sb-dot");
-  dot.className = "sb-dot " + status;
-  document.getElementById("sb-status-text").textContent = text;
-}
-
-// ─── Logs ─────────────────────────────────────────────────────────────────────
-function appendLog({ level, msg, ts }) {
-  const el   = document.getElementById("log-console");
-  const line = document.createElement("div");
-  line.className = `log-line ${level}`;
-  const time = new Date(ts).toLocaleTimeString("ar");
-  line.innerHTML = `<span class="log-ts">${time}</span> ${escHtml(msg)}`;
-  el.appendChild(line);
-  if (el.children.length > 600) el.removeChild(el.firstChild);
-  const auto = document.getElementById("auto-scroll");
-  if (!auto || auto.checked) el.scrollTop = el.scrollHeight;
-}
-
-function clearLogs() { document.getElementById("log-console").innerHTML = ""; }
-function scrollLogsBottom() { const el = document.getElementById("log-console"); el.scrollTop = el.scrollHeight; }
-
-// ─── Messages ─────────────────────────────────────────────────────────────────
-function appendMsg({ senderID, threadID, body, ts }) {
-  const el   = document.getElementById("msg-feed");
-  const item = document.createElement("div");
-  item.className = "msg-item";
-  const time = new Date(ts).toLocaleTimeString("ar");
-  item.innerHTML = `
-    <div class="msg-header">
-      <span class="msg-uid">👤 ${escHtml(senderID)}</span>
-      <span class="msg-tid">📍 ${escHtml(String(threadID))}</span>
-      <span class="msg-ts">${time}</span>
-    </div>
-    <div class="msg-body">${escHtml(body || "")}</div>
-  `;
-  el.appendChild(item);
-  if (el.children.length > 60) el.removeChild(el.firstChild);
-  el.scrollTop = el.scrollHeight;
-}
-
-// ─── Stats ────────────────────────────────────────────────────────────────────
-async function loadStats() {
-  const { ok, data } = await api("GET", "/api/stats");
-  if (!ok) return;
-  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || "—"; };
-  set("st-uptime", data.uptime);
-  set("st-cmds", data.commands);
-  set("st-admins", data.admins);
-  set("st-heap", data.memHeap);
-  set("st-sys", data.sysUsed);
-  set("inf-name", data.botName);
-  set("inf-ver", data.version);
-  set("inf-prefix", data.prefix);
-  set("inf-cookie", data.cookie);
-  set("inf-owner", data.ownerID || "—");
-  set("inf-heap", data.memHeap);
-  set("inf-heapt", data.memTotal);
-  set("inf-sysram", `${data.sysUsed} / ${data.sysTotal}`);
-  if (data.online) { set("inf-conn", "✅ متصل"); } else { set("inf-conn", "❌ غير متصل"); }
-}
-
-async function loadDbStats() {
-  const { ok, data } = await api("GET", "/api/db-stats");
-  if (!ok) return;
-  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val ?? "0"; };
-  set("db-users", data.totalUsers);
-  set("db-threads", data.totalThreads);
-  set("db-cmds", data.totalCommands);
-}
-
-// ─── Commands ─────────────────────────────────────────────────────────────────
 async function loadCommands() {
-  const { ok, data } = await api("GET", "/api/commands");
-  if (!ok) return;
-  const grid = document.getElementById("cmd-grid");
-  if (!grid) return;
-  grid.innerHTML = "";
-  if (!data.length) { grid.innerHTML = '<div style="color:var(--muted2)">لا توجد أوامر محمّلة</div>'; return; }
-  data.forEach(cmd => {
-    const el = document.createElement("div");
-    el.className = "cmd-card";
-    el.innerHTML = `
-      <div class="cmd-name">/${escHtml(cmd.name)}</div>
-      ${cmd.aliases.length ? `<div class="cmd-aliases">أسماء بديلة: ${cmd.aliases.map(a => '/'+escHtml(a)).join(", ")}</div>` : ""}
-      <span class="cmd-cat">${escHtml(cmd.category)}</span>
-    `;
-    grid.appendChild(el);
-  });
+  const d = await apiFetch("/api/commands");
+  const grid = document.getElementById("cmdGrid");
+  const tot  = document.getElementById("cmdTotal");
+  if (!d.ok || !grid) return;
+  const cmds = d.commands || [];
+  if (tot) tot.textContent = cmds.length;
+  if (!cmds.length) { grid.innerHTML = '<p style="color:var(--text2);font-size:13px;">لا توجد أوامر محملة</p>'; return; }
+  grid.innerHTML = cmds.map(c => `
+    <div class="cmd-card">
+      <div class="cmd-name">/${c.name}</div>
+      <div class="cmd-cat">${c.category || "other"}</div>
+      <div class="cmd-desc">${c.description || ""}</div>
+      <span class="cmd-badge ${c.role >= 3 ? 'role-3' : 'role-2'}">${c.role >= 3 ? "👑 Owner" : "🔑 Admin"}</span>
+    </div>
+  `).join("");
 }
 
-// ─── Admins ───────────────────────────────────────────────────────────────────
-async function loadAdmins() {
-  const { ok, data } = await api("GET", "/api/admins");
-  if (!ok) return;
-  const list = document.getElementById("admin-list");
-  if (!list) return;
-  list.innerHTML = "";
+async function loadMessages() {
+  const d = await apiFetch("/api/messages");
+  const log = document.getElementById("msgLog");
+  if (!d.ok || !log) return;
+  const msgs = d.messages || [];
+  if (!msgs.length) return;
+  log.innerHTML = msgs.map(m => {
+    const dt = new Date(m.ts).toLocaleTimeString("ar");
+    return `<div class="msg-item"><div class="msg-body">${escHtml(m.body)}</div><div class="msg-meta">${dt} — ${m.tid||""}</div></div>`;
+  }).join("");
+}
 
-  const addItem = (id, role) => {
-    const el = document.createElement("div");
-    el.className = "admin-item";
-    el.innerHTML = `
-      <div class="admin-icon">${role === "owner" ? "👑" : "🛡️"}</div>
-      <div class="admin-id">${escHtml(id)}</div>
-      <span class="admin-badge ${role}">${role === "owner" ? "مالك" : "أدمن"}</span>
-      ${role !== "owner" ? `<button class="btn btn-danger btn-sm" onclick="removeAdmin('${escHtml(id)}')">🗑️</button>` : ""}
-    `;
-    list.appendChild(el);
+function escHtml(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+async function loadSettings() {
+  const d = await apiFetch("/api/config");
+  if (!d.ok) return;
+  const c = d.config;
+  setVal("cfg-prefix",    c.prefix    || "/");
+  setVal("cfg-botName",   c.botName   || "DAVID V1");
+  setVal("cfg-ownerID",   c.ownerID   || "");
+  setCheck("cfg-stealth",   c.stealth?.enable !== false);
+  setCheck("cfg-keepalive", c.keepAlive?.enable !== false);
+  setCheck("cfg-mqtt",      c.mqttHealthCheck?.enable !== false);
+  setCheck("cfg-adminonly", c.adminOnly?.enable === true);
+}
+
+async function saveSettings() {
+  const body = {
+    prefix:  getVal("cfg-prefix"),
+    botName: getVal("cfg-botName"),
+    ownerID: getVal("cfg-ownerID"),
+    stealth:        { enable: getCheck("cfg-stealth") },
+    keepAlive:      { enable: getCheck("cfg-keepalive") },
+    mqttHealthCheck:{ enable: getCheck("cfg-mqtt") },
+    adminOnly:      { enable: getCheck("cfg-adminonly") },
   };
-
-  if (data.ownerID) addItem(data.ownerID, "owner");
-  (data.adminIDs || []).forEach(id => addItem(id, "admin"));
-  if (!data.ownerID && !(data.adminIDs||[]).length) list.innerHTML = '<div style="color:var(--muted2);font-size:.82rem">لا يوجد أدمن حتى الآن</div>';
-
-  // Set owner input
-  const ownerIn = document.getElementById("owner-input");
-  if (ownerIn) ownerIn.value = data.ownerID || "";
+  const d = await apiFetch("/api/config", { method: "POST", body: JSON.stringify(body) });
+  if (d.ok) toast("✅ تم حفظ الإعدادات", "success");
+  else       toast("❌ " + (d.error || "فشل الحفظ"), "error");
 }
 
-async function addAdmin() {
-  const input = document.getElementById("add-admin-input");
-  const fbid  = (input?.value || "").trim();
-  if (!fbid) return toast("أدخل Facebook ID", "error");
-  const { ok, data } = await api("POST", "/api/admins/add", { fbid });
-  if (ok) { toast("✅ تمت الإضافة", "success"); input.value = ""; loadAdmins(); }
-  else toast(data.error || "خطأ", "error");
+function setVal(id,v)   { const e=document.getElementById(id); if(e)e.value=v; }
+function getVal(id)     { return document.getElementById(id)?.value||""; }
+function setCheck(id,v) { const e=document.getElementById(id); if(e)e.checked=!!v; }
+function getCheck(id)   { return !!document.getElementById(id)?.checked; }
+
+// ── Protection list ───────────────────────────────────────────────────────────
+const protections = [
+  "Stealth v2 (Presence)", "Human Typing Simulator", "Natural Presence",
+  "MQTT Health Check", "Session Refresher", "Keep Alive Ping",
+  "Rate Limiter", "Outgoing Throttle", "Anti-Detection",
+  "Behavior Scheduler", "Human Read Receipt", "Scroll Simulator",
+  "Reaction Delay", "Connection Jitter", "Duplicate Guard",
+  "Typing Variator", "User-Agent Rotator", "DM Lock System",
+  "Account Rotation", "Universal Protector",
+];
+function loadProtections() {
+  const grid = document.getElementById("protGrid");
+  if (!grid) return;
+  grid.innerHTML = protections.map((p,i) => `
+    <div class="prot-pill" style="animation-delay:${i*30}ms">
+      <div class="p-dot"></div>
+      <span>${p}</span>
+    </div>
+  `).join("");
 }
 
-async function removeAdmin(fbid) {
-  const { ok } = await api("POST", "/api/admins/remove", { fbid });
-  if (ok) { toast("✅ تم الحذف", "success"); loadAdmins(); }
-  else toast("خطأ في الحذف", "error");
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+document.querySelectorAll(".tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    const pane = document.getElementById("tab-" + btn.dataset.tab);
+    if (pane) pane.classList.add("active");
+    if (btn.dataset.tab === "commands")   loadCommands();
+    if (btn.dataset.tab === "protection") loadProtections();
+    if (btn.dataset.tab === "settings")  loadSettings();
+    if (btn.dataset.tab === "messages")  loadMessages();
+  });
+});
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, type="") {
+  const c = document.getElementById("toast-container");
+  const t = document.createElement("div");
+  t.className = "toast " + type;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity="0"; t.style.transition="opacity .3s"; setTimeout(() => t.remove(), 300); }, 3000);
 }
 
-async function setOwner() {
-  const ownerID = document.getElementById("owner-input")?.value.trim();
-  if (!ownerID) return toast("أدخل Owner ID", "error");
-  const { ok, data } = await api("POST", "/api/owner", { ownerID });
-  if (ok) { toast("✅ تم تعيين المالك", "success"); loadAdmins(); }
-  else toast(data.error || "خطأ", "error");
-}
-
-// ─── Cookie ───────────────────────────────────────────────────────────────────
-async function saveCookie() {
-  const cookie = document.getElementById("cookie-input")?.value.trim();
-  if (!cookie) return toast("الحقل فارغ", "error");
-  const { ok, data } = await api("POST", "/api/cookie", { cookie });
-  if (ok) { toast(`✅ تم الحفظ (${data.count} كوكي) — جارٍ إعادة التشغيل…`, "success"); setTimeout(restartBot, 1500); }
-  else toast(data.error || "خطأ في تحليل الكوكي", "error");
-}
-
-async function loadCookie() {
-  const { ok, data } = await api("GET", "/api/cookie");
-  if (!ok) return toast("خطأ", "error");
-  const input = document.getElementById("cookie-input");
-  if (input) input.value = data.cookie || "";
-  toast("✅ تم التحميل", "success");
-}
-
-// ─── Restart ─────────────────────────────────────────────────────────────────
-async function restartBot() {
-  toast("🔄 جارٍ إعادة تشغيل البوت…", "info");
-  await api("POST", "/api/restart");
-}
-
-// ─── Send message ─────────────────────────────────────────────────────────────
-async function sendMsg() {
-  const threadID = document.getElementById("send-thread")?.value.trim();
-  const message  = document.getElementById("send-msg")?.value.trim();
-  if (!threadID || !message) return toast("Thread ID والرسالة مطلوبان", "error");
-  const { ok, data } = await api("POST", "/api/send", { threadID, message });
-  if (ok) { toast("✅ تم الإرسال", "success"); document.getElementById("send-msg").value = ""; }
-  else toast(data.error || "خطأ في الإرسال", "error");
-}
-
-// ─── Navigation ───────────────────────────────────────────────────────────────
-const PAGE_TITLES = { overview: "📊 نظرة عامة", logs: "📋 السجلات", messages: "💬 الرسائل", commands: "⚡ الأوامر", protection: "🛡️ الحماية", admins: "👑 الأدمن", cookie: "🍪 الكوكيز", send: "📤 إرسال رسالة" };
-
-function showPage(id, el) {
-  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-  document.querySelectorAll(".sb-nav-item").forEach(n => n.classList.remove("active"));
-  const page = document.getElementById(`page-${id}`);
-  if (page) page.classList.add("active");
-  if (el)   el.classList.add("active");
-  const title = document.getElementById("hdr-title");
-  if (title) title.textContent = PAGE_TITLES[id] || id;
-  closeSidebar();
-
-  if (id === "overview") { loadStats(); loadDbStats(); }
-  if (id === "admins")   loadAdmins();
-  if (id === "commands") loadCommands();
-}
-
-function toggleSidebar() {
-  document.getElementById("sidebar").classList.toggle("open");
-  document.getElementById("overlay").style.display = document.getElementById("sidebar").classList.contains("open") ? "block" : "none";
-}
-function closeSidebar() {
-  document.getElementById("sidebar").classList.remove("open");
-  document.getElementById("overlay").style.display = "none";
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function escHtml(s) {
-  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-}
-
-// ─── Auto refresh stats ───────────────────────────────────────────────────────
-setInterval(() => { if (document.getElementById("page-overview").classList.contains("active")) { loadStats(); loadDbStats(); } }, 30000);
-
-// ─── Init ─────────────────────────────────────────────────────────────────────
-checkAuth();
+// ── Init ─────────────────────────────────────────────────────────────────────
+(async () => {
+  await refreshStats();
+  loadProtections();
+  const status = await apiFetch("/api/status");
+  if (status.online) setStatus("online", `متصل ✔ (${status.botID})`);
+  else               setStatus("offline", "البوت غير متصل");
+})();
 </script>
 </body>
 </html>

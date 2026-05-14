@@ -1,9 +1,8 @@
 node_modules/
+account.txt
 data/
-*.sqlite
-*.db
+database/data/
+*.log
 .env
-.DS_Store
-Thumbs.db
-uploads/
-src/dashboard/public/uploads/
+.local/
+*.sqlite
