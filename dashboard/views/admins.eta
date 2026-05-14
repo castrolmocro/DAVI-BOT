@@ -1,0 +1,73 @@
+<%~ includeFile('partials/header', { title: 'Bot Admins — DAVID V1' }) %>
+
+<div class="app-layout">
+  <%~ includeFile('partials/nav', { page: it.page }) %>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Bot Admins</h1>
+        <p class="page-subtitle">Manage who can control DAVID V1</p>
+      </div>
+    </div>
+
+    <% if (it.flash?.error?.length) { %><div class="alert alert-error"><%= it.flash.error[0] %></div><% } %>
+    <% if (it.flash?.success?.length) { %><div class="alert alert-success"><%= it.flash.success[0] %></div><% } %>
+
+    <div class="info-grid">
+      <div class="info-card">
+        <h3 class="card-title">👑 Super Admins (Level 3)</h3>
+        <p class="card-desc">Full control. Can add/remove other admins.</p>
+        <% if (it.supers.length === 0) { %>
+          <p class="empty-state">No super admins configured.<br>Add an ID to config.json → superAdminBot</p>
+        <% } else { %>
+          <div class="admin-list">
+            <% it.supers.forEach(id => { %>
+              <div class="admin-item">
+                <div class="admin-avatar"><%= id.slice(-2) %></div>
+                <span class="admin-id mono"><%= id %></span>
+                <span class="badge badge-purple">Super</span>
+              </div>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="info-card">
+        <h3 class="card-title">🛡️ Bot Admins (Level 2)</h3>
+        <p class="card-desc">Can use all bot commands.</p>
+
+        <form action="/dashboard/admins/add" method="POST" class="add-form">
+          <div class="form-row">
+            <input type="text" name="fbid" class="form-input" placeholder="Facebook User ID (e.g. 100012345678)" required />
+            <button type="submit" class="btn btn-primary">Add Admin</button>
+          </div>
+        </form>
+
+        <% if (it.admins.length === 0) { %>
+          <p class="empty-state">No bot admins yet. Add a Facebook ID above.</p>
+        <% } else { %>
+          <div class="admin-list">
+            <% it.admins.forEach(id => { %>
+              <div class="admin-item">
+                <div class="admin-avatar"><%= id.slice(-2) %></div>
+                <span class="admin-id mono"><%= id %></span>
+                <form action="/dashboard/admins/remove" method="POST" style="margin:0">
+                  <input type="hidden" name="fbid" value="<%= id %>" />
+                  <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Remove this admin?')">Remove</button>
+                </form>
+              </div>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="card-title">ℹ️ How to find your Facebook ID</h3>
+      <p class="card-desc">Go to your Facebook profile → right-click → View Page Source → search for <code class="code-badge">"userID"</code> or use a tool like <a href="https://findmyfbid.in" target="_blank" class="link">findmyfbid.in</a></p>
+    </div>
+  </main>
+</div>
+
+<%~ includeFile('partials/footer', {}) %>
