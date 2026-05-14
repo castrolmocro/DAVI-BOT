@@ -1,0 +1,127 @@
+<%~ includeFile('partials/header', { title: 'Dashboard — DAVID V1' }) %>
+
+<div class="app-layout">
+  <%~ includeFile('partials/nav', { page: it.page }) %>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-subtitle">DAVID V1 Control Panel — by DJAMEL</p>
+      </div>
+      <div class="header-actions">
+        <button onclick="restartBot()" class="btn btn-warning">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Restart
+        </button>
+      </div>
+    </div>
+
+    <!-- Status Banner -->
+    <div class="status-banner <%= it.stats.isOnline ? 'online' : 'offline' %>">
+      <div class="status-indicator">
+        <span class="pulse-dot"></span>
+        <%= it.stats.isOnline ? '🟢 Bot is Online' : '🔴 Bot is Offline' %>
+      </div>
+      <div class="status-detail">
+        Protection: <%= it.stats.protection %> &nbsp;|&nbsp;
+        Stealth: <%= it.stats.stealth %> &nbsp;|&nbsp;
+        Uptime: <span data-stat="uptime"><%= it.stats.uptime %></span>
+      </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon cyan">📦</div>
+        <div class="stat-info">
+          <span class="stat-value" data-stat="commands"><%= it.stats.commands %></span>
+          <span class="stat-label">Commands</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green">📡</div>
+        <div class="stat-info">
+          <span class="stat-value" data-stat="events"><%= it.stats.events %></span>
+          <span class="stat-label">Events</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon yellow">👑</div>
+        <div class="stat-info">
+          <span class="stat-value" data-stat="admins"><%= it.stats.adminCount %></span>
+          <span class="stat-label">Bot Admins</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon purple">🧠</div>
+        <div class="stat-info">
+          <span class="stat-value" data-stat="memHeap"><%= it.stats.memUsed %></span>
+          <span class="stat-label">Heap Memory</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon blue">⏱️</div>
+        <div class="stat-info">
+          <span class="stat-value" data-stat="uptime"><%= it.stats.uptime %></span>
+          <span class="stat-label">Uptime</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon red">🛡️</div>
+        <div class="stat-info">
+          <span class="stat-value">20</span>
+          <span class="stat-label">Protection Layers</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Info -->
+    <div class="info-grid">
+      <div class="info-card">
+        <h3 class="card-title">🤖 Bot Info</h3>
+        <div class="info-rows">
+          <div class="info-row"><span class="info-key">Name</span><span class="info-val"><%= it.stats.botName %></span></div>
+          <div class="info-row"><span class="info-key">Version</span><span class="info-val"><%= it.stats.version %></span></div>
+          <div class="info-row"><span class="info-key">Prefix</span><span class="info-val"><code class="code-badge"><%= it.stats.prefix %></code></span></div>
+          <div class="info-row"><span class="info-key">Author</span><span class="info-val accent">DJAMEL</span></div>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <h3 class="card-title">🛡️ Protection Layers</h3>
+        <div class="protection-layers">
+          <% const layers = [
+            'Presence Cycling', 'Human Browsing', 'Read Simulation', 'Sleep Mode',
+            'UA Rotation', 'Rate Limiting', 'Outgoing Throttle', 'HTTP Fingerprinting',
+            'Warmup Mode', 'Typing Indicator', 'Action Jitter', 'MQTT Health Check',
+            'Keep-Alive Ping', 'Cookie Freshness', 'Auto Re-Login', 'Anti-Flood',
+            'Anti-Spam', 'DM Lock', 'Anti-Impersonation', 'Bot-Detection Evasion'
+          ]; %>
+          <% layers.forEach((layer, i) => { %>
+            <div class="layer-item">
+              <span class="layer-num"><%= (i + 1).toString().padStart(2, '0') %></span>
+              <span class="layer-name"><%= layer %></span>
+              <span class="layer-status active">✓</span>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+async function restartBot() {
+  if (!confirm('Are you sure you want to restart the bot?')) return;
+  try {
+    await fetch('/api/restart', { method: 'POST' });
+    alert('Bot is restarting...');
+    setTimeout(() => window.location.reload(), 3000);
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+</script>
+
+<%~ includeFile('partials/footer', {}) %>
