@@ -1,0 +1,46 @@
+<%~ includeFile('partials/header', { title: 'Cookie / Login — DAVID V1' }) %>
+
+<div class="app-layout">
+  <%~ includeFile('partials/nav', { page: it.page }) %>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Cookie / Login</h1>
+        <p class="page-subtitle">Update Facebook session cookie (appState)</p>
+      </div>
+    </div>
+
+    <% if (it.flash?.error?.length) { %><div class="alert alert-error"><%= it.flash.error[0] %></div><% } %>
+    <% if (it.flash?.success?.length) { %><div class="alert alert-success"><%= it.flash.success[0] %></div><% } %>
+
+    <div class="info-card">
+      <h3 class="card-title">🍪 Current Cookie (account.txt)</h3>
+      <p class="card-desc">Paste your Facebook appState JSON here. The bot will use this to log in.</p>
+
+      <form action="/dashboard/cookie" method="POST">
+        <div class="form-group">
+          <label class="form-label">AppState JSON</label>
+          <textarea name="cookie" class="form-textarea" rows="12" placeholder='[{"key":"c_user","value":"..."}]'><%= it.cookie %></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save Cookie</button>
+          <p class="form-hint">After saving, restart the bot for changes to take effect.</p>
+        </div>
+      </form>
+    </div>
+
+    <div class="info-card">
+      <h3 class="card-title">📖 How to Get Your Cookie</h3>
+      <div class="steps">
+        <div class="step"><span class="step-num">1</span><span>Install the browser extension <strong>c3c-cookie-editor</strong> or <strong>EditThisCookie</strong></span></div>
+        <div class="step"><span class="step-num">2</span><span>Log into Facebook in your browser</span></div>
+        <div class="step"><span class="step-num">3</span><span>Open the extension → click "Export as JSON"</span></div>
+        <div class="step"><span class="step-num">4</span><span>Paste the JSON above and click Save</span></div>
+        <div class="step"><span class="step-num">5</span><span>Restart the bot from the Dashboard</span></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<%~ includeFile('partials/footer', {}) %>
