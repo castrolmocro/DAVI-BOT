@@ -1,36 +1,29 @@
 /**
- * DAVID V1 — Logger System
- * Copyright © DJAMEL
+ * DAVID V1 — Logger
+ * Copyright © 2025 DJAMEL
  */
 "use strict";
-
-const chalk   = require("chalk");
-const moment  = require("moment-timezone");
-
-const TZ = () => (global.GoatBot?.config?.timezone || "Africa/Algiers");
-
+const chalk  = require("chalk");
+let _moment  = null;
+function getMoment() { if (!_moment) { try { _moment = require("moment-timezone"); } catch(_) {} } return _moment; }
 const ts = () => {
-  try { return moment().tz(TZ()).format("HH:mm:ss"); }
-  catch (_) { return new Date().toTimeString().slice(0, 8); }
+  const m = getMoment();
+  if (m) { try { return m().tz(global.GoatBot?.config?.timezone||"Africa/Algiers").format("HH:mm:ss"); } catch(_) {} }
+  return new Date().toTimeString().slice(0,8);
 };
-
-const strip = s => String(s).replace(/\x1b\[[0-9;]*m/g, "");
-
 function fmt(icon, color, label, msg) {
-  const time  = chalk.gray(ts());
-  const lbl   = color(`[${label}]`);
-  const text  = typeof msg === "object" ? JSON.stringify(msg) : String(msg ?? "");
-  return `${time} ${icon} ${lbl} ${text}`;
+  const t = chalk.gray(ts());
+  const l = color(`[${label}]`);
+  const m = typeof msg === "object" ? JSON.stringify(msg) : String(msg ?? "");
+  return `${t} ${icon} ${l} ${m}`;
 }
-
 const log = {
-  info:    (label, msg) => console.log(fmt("•", chalk.cyan,    label, msg)),
-  ok:      (label, msg) => console.log(fmt("✔", chalk.green,   label, msg)),
-  warn:    (label, msg) => console.log(fmt("⚠", chalk.yellow,  label, msg)),
-  error:   (label, msg) => console.log(fmt("✘", chalk.red,     label, msg)),
-  err:     (label, msg) => console.log(fmt("✘", chalk.red,     label, msg)),
-  success: (label, msg) => console.log(fmt("★", chalk.bold.green, label, msg)),
-  master:  (label, msg) => console.log(fmt("👑", chalk.magenta, label, msg)),
+  info:    (l,m) => console.log(fmt("•", chalk.cyan,       l, m)),
+  ok:      (l,m) => console.log(fmt("✔", chalk.green,      l, m)),
+  warn:    (l,m) => console.log(fmt("⚠", chalk.yellow,     l, m)),
+  error:   (l,m) => console.log(fmt("✘", chalk.red,        l, m)),
+  err:     (l,m) => console.log(fmt("✘", chalk.red,        l, m)),
+  success: (l,m) => console.log(fmt("★", chalk.bold.green, l, m)),
+  master:  (l,m) => console.log(fmt("👑",chalk.magenta,    l, m)),
 };
-
 module.exports = log;
