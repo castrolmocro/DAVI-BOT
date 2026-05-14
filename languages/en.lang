@@ -1,0 +1,14 @@
+{
+  "handlerEvents": {
+    "userBanned":   "🚫 You are banned from using this bot.\nReason: {1}\nTime: {2}",
+    "threadBanned": "🚫 This group is banned.\nReason: {1}\nTime: {2}",
+    "onlyAdminBox": "⛔ Only group admins can use this command.",
+    "onlyAdminBot": "⛔ Only bot admins can use this command."
+  },
+  "general": {
+    "loading":    "⏳ Loading...",
+    "success":    "✅ Done!",
+    "error":      "❌ An error occurred.",
+    "noPermission": "⛔ You don't have permission to use this command."
+  }
+}
