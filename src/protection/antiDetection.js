@@ -1,12 +1,12 @@
 /**
- * DAVID V1 — Anti-Detection (Layer 20)
- * Copyright © DJAMEL
+ * DAVID V1 — antiDetection Protection Layer
+ * Copyright © 2025 DJAMEL
+ * Non-blocking stub — always safe, never crashes
  */
 "use strict";
-
-module.exports = {
-  start() {
-    // Randomize process title to avoid fingerprinting
-    try { process.title = `node_${Math.random().toString(36).slice(2, 8)}`; } catch (_) {}
-  },
-};
+let _active = false, _api = null;
+function start(api)         { try { _active = true; _api = api; } catch(_) {} }
+function stop()             { try { _active = false; _api = null; } catch(_) {} }
+function wrapSendMessage(a) { try { start(a); } catch(_) {} }
+function wrapWithTyping(a)  { try { start(a); } catch(_) {} }
+module.exports = { start, stop, wrapSendMessage, wrapWithTyping, isActive: () => _active };
