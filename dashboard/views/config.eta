@@ -1,0 +1,22 @@
+<%~ includeFile('partials/header', { title: 'Config — DAVID V1' }) %>
+
+<div class="app-layout">
+  <%~ includeFile('partials/nav', { page: it.page }) %>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Config</h1>
+        <p class="page-subtitle">Current bot configuration (read-only — edit config.json)</p>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <h3 class="card-title">⚙️ config.json</h3>
+      <p class="card-desc">Sensitive values are masked. Edit the file directly to make changes.</p>
+      <pre class="code-block"><code><%= it.configStr %></code></pre>
+    </div>
+  </main>
+</div>
+
+<%~ includeFile('partials/footer', {}) %>
