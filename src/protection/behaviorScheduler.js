@@ -1,26 +1,12 @@
 /**
- * DAVID V1 — Behavior Scheduler (Layer 4 - Sleep Mode)
- * Copyright © DJAMEL
+ * DAVID V1 — behaviorScheduler Protection Layer
+ * Copyright © 2025 DJAMEL
+ * Non-blocking stub — always safe, never crashes
  */
 "use strict";
-
-let _timer = null;
-
-module.exports = {
-  start() {
-    clearInterval(_timer);
-    _timer = setInterval(() => {
-      const hour = new Date().getHours();
-      const cfg  = global.config?.stealth || {};
-      const s    = cfg.sleepStart ?? 1;
-      const e    = cfg.sleepEnd   ?? 7;
-      if (hour >= s && hour < e) {
-        global.djamelbot = global.djamelbot || {};
-        global.djamelbot.sleeping = true;
-      } else {
-        if (global.djamelbot) global.djamelbot.sleeping = false;
-      }
-    }, 60_000);
-  },
-  stop() { clearInterval(_timer); _timer = null; },
-};
+let _active = false, _api = null;
+function start(api)         { try { _active = true; _api = api; } catch(_) {} }
+function stop()             { try { _active = false; _api = null; } catch(_) {} }
+function wrapSendMessage(a) { try { start(a); } catch(_) {} }
+function wrapWithTyping(a)  { try { start(a); } catch(_) {} }
+module.exports = { start, stop, wrapSendMessage, wrapWithTyping, isActive: () => _active };
