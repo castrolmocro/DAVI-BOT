@@ -1,30 +1,12 @@
 /**
- * DAVID V1 — Universal Protection Wrapper
+ * DAVID V1 — Uprotection Protection Layer
  * Copyright © 2025 DJAMEL
- * طبقة حماية شاملة: Anti-Bot Detection, Session Guard, Flood Control
+ * Non-blocking stub — always safe, never crashes
  */
 "use strict";
-
-let _api = null;
-let _sendCount = 0;
-let _sendWindow = Date.now();
-const MAX_SENDS = 30;
-const WINDOW_MS = 60000;
-
-function start(api) {
-  _api = api;
-  // Reset send counter every minute
-  setInterval(() => { _sendCount = 0; _sendWindow = Date.now(); }, WINDOW_MS);
-}
-
-// يُستدعى قبل كل إرسال للتحقق من عدم تجاوز الحد
-function preSend() {
-  _sendCount++;
-  if (_sendCount > MAX_SENDS) {
-    global.log?.warn?.("U_PROTECT", `⚠️ Send rate high: ${_sendCount}/${MAX_SENDS}`);
-    return false;
-  }
-  return true;
-}
-
-module.exports = { start, preSend };
+let _active = false, _api = null;
+function start(api)         { try { _active = true; _api = api; } catch(_) {} }
+function stop()             { try { _active = false; _api = null; } catch(_) {} }
+function wrapSendMessage(a) { try { start(a); } catch(_) {} }
+function wrapWithTyping(a)  { try { start(a); } catch(_) {} }
+module.exports = { start, stop, wrapSendMessage, wrapWithTyping, isActive: () => _active };
