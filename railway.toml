@@ -4,6 +4,12 @@ builder = "nixpacks"
 [deploy]
 startCommand = "node index.js"
 healthcheckPath = "/"
-healthcheckTimeout = 60
+healthcheckTimeout = 120
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
+
+[phases.setup]
+nixPkgs = ["nodejs_20", "python3", "pkg-config", "pixman", "cairo", "pango", "libjpeg", "libpng", "giflib"]
+
+[phases.install]
+cmds = ["npm install --legacy-peer-deps --no-audit"]
