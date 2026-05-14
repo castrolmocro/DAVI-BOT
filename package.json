@@ -1,11 +1,14 @@
 {
   "name": "david-v1",
   "version": "2.0.0",
-  "description": "DAVID V1 — DjamelBot Engine | Copyright © DJAMEL",
+  "description": "DAVID V1 — DjamelBot Engine | Copyright © 2025 DJAMEL",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev":   "node Goat.js"
+    "dev":   "node David.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@dongdev/fca-unofficial": "*",
@@ -22,5 +25,5 @@
   },
   "author": "DJAMEL",
   "license": "UNLICENSED",
-  "keywords": ["facebook", "bot", "messenger", "DAVID", "DJAMEL"]
+  "keywords": ["facebook", "messenger", "bot", "DAVID", "DJAMEL", "chatbot"]
 }
