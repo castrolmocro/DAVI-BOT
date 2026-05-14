@@ -1,0 +1,12 @@
+node_modules/
+database/data/*.sqlite
+database/data/data.sqlite
+*.log
+.env
+.DS_Store
+Thumbs.db
+scripts/cmds/cache/*.jpg
+scripts/cmds/cache/*.png
+scripts/cmds/cache/*.mp3
+scripts/cmds/cache/*.mp4
+scripts/events/tmp/*
