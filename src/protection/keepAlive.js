@@ -1,52 +1,37 @@
 /**
- * DAVID V1 — Keep Alive System
+ * DAVID V1 — Keep Alive (Layer 5)
  * Copyright © 2025 DJAMEL
- * يحافظ على الجلسة نشطة عبر ping دوري لـ mbasic.facebook.com
  */
 "use strict";
 const axios = require("axios");
-
-let _timer = null;
+let _t = null;
 const rand = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
-
-async function doPing() {
-  const api = global.GoatBot?.fcaApi;
-  if (!api) return;
+async function ping() {
   try {
-    const state = api.getAppState();
-    if (!state?.length) return;
-    const ck = state.map(c=>`${c.key}=${c.value}`).join("; ");
+    const api = global.GoatBot?.fcaApi;
+    if (!api) return;
+    const s = api.getAppState?.();
+    if (!s?.length) return;
+    const ck = s.map(c => `${c.key}=${c.value}`).join("; ");
     let ua;
-    try { ua = require("./stealth").getCurrentUA(); } catch(_) {}
-    ua = ua || global.GoatBot?.config?.facebookAccount?.userAgent || "Mozilla/5.0";
-
-    const res = await axios.head("https://mbasic.facebook.com/", {
-      headers: { cookie: ck, "user-agent": ua, "accept": "text/html,*/*;q=0.8" },
+    try { ua = require("./stealth").getUA(); } catch(_) {}
+    ua = ua || "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36";
+    const r = await axios.head("https://mbasic.facebook.com/", {
+      headers: { cookie: ck, "user-agent": ua },
       timeout: 10000, validateStatus: null, maxRedirects: 2,
     });
-
-    if (res.status === 302 || String(res.headers?.location||"").includes("login")) {
-      global.log?.warn?.("KEEP_ALIVE", "⚠️ Session expired");
-      global.statusAccountBot = "session_expired";
-    }
+    if (String(r.headers?.location || "").includes("login"))
+      global.log?.warn?.("KEEP_ALIVE", "⚠️ Session may be expired");
   } catch (_) {}
 }
-
 function start() {
-  if (_timer) return;
-  const cfg    = global.GoatBot?.config?.keepAlive || {};
+  if (_t) return;
+  const cfg = global.GoatBot?.config?.keepAlive || {};
   if (cfg.enable === false) return;
-  const minMs  = (cfg.pingIntervalMinMinutes || 8)  * 60000;
-  const maxMs  = (cfg.pingIntervalMaxMinutes || 15) * 60000;
-  function schedule() {
-    _timer = setTimeout(async () => {
-      await doPing();
-      schedule();
-    }, rand(minMs, maxMs));
-  }
+  const minMs = (cfg.pingIntervalMinMinutes || 8)  * 60000;
+  const maxMs = (cfg.pingIntervalMaxMinutes || 15) * 60000;
+  function schedule() { _t = setTimeout(async () => { await ping(); _t = null; schedule(); }, rand(minMs, maxMs)); }
   schedule();
 }
-
-function stop() { if (_timer) { clearTimeout(_timer); _timer = null; } }
-
+function stop() { if (_t) { clearTimeout(_t); _t = null; } }
 module.exports = { start, stop };
