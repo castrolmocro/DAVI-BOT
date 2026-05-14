@@ -1,195 +1,122 @@
 # DAVID V1 — Facebook Messenger Bot
 
-> **Developed by DJAMEL** — All rights reserved.
+> **المطور: DJAMEL** — جميع الحقوق محفوظة
 
-A powerful, stable, and human-like Facebook Messenger bot built on the **White Bot Engine** and powered by **Djamel-fca** abstractions. DAVID V1 is designed for Railway deployment with a beautiful web dashboard, 20-layer protection system, and full cookie security.
-
----
-
-## Features
-
-- 🤖 **Messenger Bot** — Reads and responds to Facebook messages in real time
-- 🛡️ **20-Layer Protection** — Anti-flood, anti-spam, stealth engine, cookie protection, auto re-login, and more
-- 🍪 **c3c Cookie Login** — Supports fca-eryxenx appState JSON (c3c cookie format)
-- 🎛️ **Beautiful Dashboard** — Responsive web panel for PC and mobile
-- 👑 **Bot Admin System** — Only configured admins can control the bot
-- 🔄 **Auto Re-Login** — Automatically refreshes session when cookie expires
-- 🚀 **Railway Ready** — One-click deploy with included railway.toml
+بوت فيسبوك ماسنجر متكامل مبني على **DjamelBot Engine** ومكتبة **Djamel-fca** المخصصة.
 
 ---
 
-## Commands
+## المميزات
 
-| Command | Description |
-|---------|-------------|
-| `/angel` | Send scheduled motivational messages to a group |
-| `/divel` | Monitor and auto-restore group settings |
-| `/nick [name]` | Lock all member nicknames |
-| `/nm [name]` | Lock the group name on a schedule |
-| `/uptime` | Show bot uptime and system stats |
-| `/chats` | Manage DM lock and chat settings |
-| `/groupimg` | Lock and enforce group profile image |
-| `/song [name]` | Search and send a song from YouTube |
-| `/tik [query]` | Search and download TikTok videos |
-
-> All commands are **admin-only** — only users listed in `adminBot` can use them.
+- 🤖 **DjamelBot Engine** — محرك بوت كامل ومتطور
+- 🍪 **c3c Cookie Login** — يدعم تنسيق fca-eryxenx و @dongdev
+- 🛡️ **16 نظام حماية** — Anti-flood, stealth, session refresh, وأكثر
+- 🎛️ **لوحة تحكم جميلة** — Socket.IO للتحديثات الفورية، تدعم PC والموبايل
+- 👑 **نظام أدمن صارم** — يتجاهل رسائل غير الأدمن كلياً بدون أي رد
+- 🔄 **إعادة تسجيل دخول تلقائية** — عند انتهاء صلاحية الكوكي
 
 ---
 
-## Quick Start
+## الأوامر (للأدمن فقط)
 
-### 1. Clone & Install
+| الأمر | الوظيفة |
+|-------|---------|
+| `/angel` | إرسال رسائل تحفيزية دورية للمجموعة |
+| `/divel` | مراقبة إعدادات المجموعة وحمايتها |
+| `/nick [اسم]` | قفل كنيات جميع الأعضاء |
+| `/nm [اسم]` | قفل اسم المجموعة وتجديده تلقائياً |
+| `/uptime` | إحصائيات البوت والنظام |
+| `/chats` | إدارة DM Lock وإعدادات البوت |
+| `/groupimg` | قفل صورة المجموعة |
+| `/song [اسم]` | تحميل أغنية من YouTube |
+| `/tik [استعلام]` | تحميل فيديو TikTok بدون علامة مائية |
+
+> ⚠️ **مهم:** البوت يتجاهل رسائل غير الأدمن كلياً — لا يرد، لا يسجّل
+
+---
+
+## التثبيت
 
 ```bash
-git clone https://github.com/YOURNAME/DAVI-BOT.git
+git clone https://github.com/castrolmocro/DAVI-BOT.git
 cd DAVI-BOT
 npm install
 ```
 
-### 2. Configure
+### إضافة الكوكيز
 
-Edit `config.json`:
+الصق الكوكي في `account.txt` أو من لوحة التحكم.
+
+### الإعداد
+
+عدّل `config.json`:
 
 ```json
 {
-  "adminBot": ["YOUR_FACEBOOK_ID"],
-  "prefix": "/"
+  "ownerID": "YOUR_FACEBOOK_ID",
+  "adminIDs": [],
+  "prefix": "/",
+  "dashboard": { "port": 5000, "password": "djamel2025*" }
 }
 ```
 
-### 3. Add your Cookie
-
-Paste your Facebook appState JSON into `account.txt`.
-Use the browser extension **c3c-cookie-editor** to export your cookies.
-
-### 4. Start
+### التشغيل
 
 ```bash
 node index.js
 ```
 
-The dashboard will be available at `http://localhost:5000`
+لوحة التحكم: `http://localhost:5000`
+كلمة المرور الافتراضية: `djamel2025*`
 
 ---
 
-## Dashboard
+## أنظمة الحماية (16 نظام)
 
-Access the web dashboard at your deployed URL (or `localhost:5000`):
-
-- **Login** — Default: `admin` / `david_v1_2024` (change in config.json)
-- **Home** — Live bot stats, protection layers, system info
-- **Bot Admins** — Add/remove bot admin Facebook IDs
-- **Cookie / Login** — Update your Facebook session cookie
-- **Config** — View current configuration
-
----
-
-## 20-Layer Protection System
-
-| Layer | Name | Description |
-|-------|------|-------------|
-| 01 | Presence Cycling | Randomizes online/idle presence |
-| 02 | Human Browsing | Browses Facebook with real browser headers |
-| 03 | Read Simulation | Marks messages as read naturally |
-| 04 | Sleep Mode | Reduces activity during 01:00–08:00 |
-| 05 | UA Rotation | Rotates user-agent strings |
-| 06 | Rate Limiting | Limits messages per minute |
-| 07 | Outgoing Throttle | Spaces out sent messages |
-| 08 | HTTP Fingerprinting | Uses Sec-Fetch headers |
-| 09 | Warmup Mode | Minimal activity for first 15 min |
-| 10 | Typing Indicator | Shows typing before every reply |
-| 11 | Action Jitter | Random micro-delays on actions |
-| 12 | MQTT Health Check | Monitors connection health |
-| 13 | Keep-Alive Ping | Periodic ping to keep session alive |
-| 14 | Cookie Freshness | Checks cookie validity periodically |
-| 15 | Auto Re-Login | Re-authenticates on cookie expiry |
-| 16 | Anti-Flood | Blocks message flooding |
-| 17 | Anti-Spam | Detects and mutes spammers |
-| 18 | DM Lock | Blocks non-admins in private DMs |
-| 19 | Anti-Impersonation | Guards against bot impersonation |
-| 20 | Bot-Detection Evasion | Natural timing and behavior patterns |
+| # | النظام | الوصف |
+|---|--------|-------|
+| 01 | Presence Cycling | تدوير حالة الحضور عشوائياً |
+| 02 | Human Browsing | تصفح فيسبوك بهيدرز حقيقية |
+| 03 | Read Simulation | قراءة الرسائل بتأخير طبيعي |
+| 04 | Sleep Mode | تقليل النشاط في ساعات النوم |
+| 05 | UA Rotation | تدوير User-Agent |
+| 06 | Rate Limiting | تحديد معدل الرسائل |
+| 07 | Outgoing Throttle | تباعد الرسائل الصادرة |
+| 08 | HTTP Fingerprinting | هيدرز Sec-Fetch الواقعية |
+| 09 | Warmup Mode | نشاط محدود في أول 15 دقيقة |
+| 10 | Typing Indicator | عرض "يكتب…" قبل كل رد |
+| 11 | Action Jitter | تأخيرات عشوائية صغيرة |
+| 12 | MQTT Health Check | مراقبة صحة الاتصال |
+| 13 | Keep-Alive Ping | ping دوري للحفاظ على الجلسة |
+| 14 | Cookie Freshness | فحص صحة الكوكي دورياً |
+| 15 | Session Refresher | تحديث AppState تلقائياً |
+| 16 | Anti-Detection | تمويه عملية البوت |
 
 ---
 
-## Deploy to Railway
-
-1. Push to GitHub
-2. Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub
-3. Set environment variables if needed
-4. Done! Railway will auto-detect `railway.toml` and start the bot
-
----
-
-## Djamel-fca Library
-
-The `Djamel-fca/` folder contains a custom abstraction library for Facebook API operations:
-
-```js
-const fca = require("./Djamel-fca");
-
-// Human-like message sending
-await fca.humanSend(api, "Hello!", threadID);
-
-// Cookie utilities
-const valid = fca.isValidAppState(appState);
-
-// Promise-based helpers
-const info = await fca.getThreadInfoAsync(api, threadID);
-```
-
----
-
-## File Structure
+## هيكل الملفات
 
 ```
 DAVI-BOT/
-├── index.js              # Watchdog (restarts bot on crash)
-├── Goat.js               # Main bot engine
-├── config.json           # Bot configuration
-├── account.txt           # Facebook cookie (appState JSON)
+├── index.js              # Watchdog (إعادة تشغيل عند الانهيار)
+├── config.json           # إعدادات البوت
+├── account.txt           # كوكيز فيسبوك
 ├── package.json
-├── railway.toml          # Railway deployment config
-├── nixpacks.toml         # Build config
+├── railway.toml          # إعدادات Railway
 │
-├── bot/
-│   ├── login/            # Login, cookie check, re-login
-│   ├── handler/          # Event & command routing
-│   ├── stealth/          # Human camouflage system (20 layers)
-│   ├── protection/       # Rate limiting
-│   ├── keepAlive/        # Session keep-alive
-│   ├── autoRelogin/      # Automatic re-authentication
-│   └── mqttHealthCheck/  # MQTT connection monitoring
+├── src/
+│   ├── index.js          # محرك DjamelBot الرئيسي
+│   ├── handler/
+│   │   └── handlerEvents.js   # معالج الأحداث (تجاهل تام لغير الأدمن)
+│   ├── commands/         # الأوامر التسعة
+│   ├── dashboard/        # Express + Socket.IO
+│   ├── utils/            # قاعدة بيانات، محلل الكوكيز، المحمّل
+│   └── protection/       # 16 نظام حماية
 │
-├── scripts/
-│   ├── cmds/             # Bot commands (/angel, /divel, etc.)
-│   └── events/           # Event listeners (antiflood, antispam)
-│
-├── dashboard/
-│   ├── app.js            # Express web server
-│   ├── routes/           # Login, dashboard, API routes
-│   ├── views/            # ETA templates
-│   └── css/              # Stylesheets
-│
-├── database/
-│   ├── connectDB/        # SQLite connection
-│   ├── controller/       # Data controllers
-│   └── data/             # Database files
-│
-├── Djamel-fca/           # Custom FCA abstractions library
-├── func/                 # Color & utility functions
-├── logger/               # Logging system
-└── languages/            # Language files
+├── Djamel-fca/           # مكتبة الـ FCA المخصصة
+└── data/                 # قاعدة البيانات SQLite
 ```
 
 ---
 
-## Credits
-
-- **Developer**: DJAMEL — Full project design, architecture, and implementation
-- **Bot Engine**: White Bot Engine (inspired by WHITE-V3)
-- **FCA Library**: fca-eryxenx (c3c cookie compatible)
-- **Dashboard**: Express + ETA templates
-
----
-
-**Copyright © DJAMEL — DAVID V1 — All rights reserved.**
+**Copyright © DJAMEL — DAVID V1 — DjamelBot Engine**

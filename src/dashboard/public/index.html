@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<title>DAVID V1 — لوحة التحكم</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07070f;--sb:#0c0c1e;--panel:#101028;--card:#13132e;
+  --border:#1e1e40;--border2:#252550;
+  --accent:#7c6cfc;--accent2:#00d4ff;--accent3:#a78bfa;
+  --green:#22c55e;--red:#ef4444;--orange:#f97316;--yellow:#eab308;
+  --blue:#3b82f6;--pink:#ec4899;
+  --text:#d0d0e8;--muted:#4a4a72;--muted2:#6a6a9a;
+  --sb-w:230px;--hdr:52px;--r:12px;
+}
+html,body{height:100%;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+a{color:inherit;text-decoration:none}
+button,input,select,textarea{font-family:inherit}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+.hidden{display:none!important}
+
+/* ─── LOGIN ─────────────────────────────────────────────── */
+#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;padding:16px}
+.lc{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:40px 32px;width:100%;max-width:380px;text-align:center}
+.lc-icon{font-size:3.5rem;margin-bottom:8px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.lc-title{font-size:1.7rem;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+.lc-sub{font-size:.75rem;color:var(--muted2);margin-bottom:28px;letter-spacing:.5px}
+.lc input{width:100%;background:#060614;border:1px solid var(--border);border-radius:10px;color:var(--text);padding:12px 16px;font-size:.95rem;outline:none;transition:border .2s,box-shadow .2s;margin-bottom:14px;text-align:center;letter-spacing:3px}
+.lc input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,108,252,.2)}
+.lc-btn{width:100%;padding:13px;border-radius:10px;border:none;font-size:.95rem;font-weight:700;cursor:pointer;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;transition:opacity .2s,transform .1s;letter-spacing:.5px}
+.lc-btn:hover{opacity:.88}
+.lc-btn:active{transform:scale(.98)}
+.lc-err{color:var(--red);font-size:.78rem;margin-top:10px;min-height:20px;transition:opacity .3s}
+.lc-copy{color:var(--muted);font-size:.66rem;margin-top:20px}
+
+/* ─── LAYOUT ─────────────────────────────────────────────── */
+#app{display:flex;min-height:100vh}
+#sidebar{width:var(--sb-w);background:var(--sb);border-left:1px solid var(--border);display:flex;flex-direction:column;position:fixed;right:0;top:0;bottom:0;z-index:100;transition:transform .3s cubic-bezier(.4,0,.2,1)}
+#main{margin-right:var(--sb-w);flex:1;display:flex;flex-direction:column;min-height:100vh}
+#overlay{position:fixed;inset:0;background:#000c;z-index:99;display:none}
+#menu-btn{display:none;position:fixed;top:10px;left:10px;z-index:200;background:var(--panel);border:1px solid var(--border);border-radius:9px;width:38px;height:38px;font-size:1.3rem;cursor:pointer;align-items:center;justify-content:center;color:var(--text)}
+
+/* ─── SIDEBAR ─────────────────────────────────────────────── */
+.sb-header{padding:20px 16px 14px;border-bottom:1px solid var(--border)}
+.sb-logo{display:flex;align-items:center;gap:10px}
+.sb-logo-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.sb-logo-text{font-size:1.1rem;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sb-logo-sub{font-size:.62rem;color:var(--muted2);margin-top:1px}
+
+.sb-status{margin:12px 16px;padding:8px 12px;border-radius:8px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:.78rem}
+.sb-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s,box-shadow .3s}
+.sb-dot.online{background:var(--green);box-shadow:0 0 6px var(--green)}
+.sb-dot.offline{background:var(--red)}
+.sb-dot.connecting{background:var(--orange);animation:blink .8s infinite}
+.sb-dot.degraded{background:var(--yellow)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.sb-status-text{color:var(--muted2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.sb-nav{flex:1;overflow-y:auto;padding:8px 10px}
+.sb-nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;cursor:pointer;color:var(--muted2);font-size:.88rem;font-weight:500;transition:all .18s;margin-bottom:2px}
+.sb-nav-item:hover{background:var(--panel);color:var(--text)}
+.sb-nav-item.active{background:rgba(124,108,252,.18);color:var(--accent3);border-left:2px solid var(--accent)}
+.sb-nav-icon{font-size:1rem;width:20px;text-align:center}
+
+.sb-footer{padding:14px 16px;border-top:1px solid var(--border)}
+.sb-footer-row{display:flex;gap:8px}
+.sb-footer-btn{flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted2);font-size:.78rem;cursor:pointer;transition:all .18s}
+.sb-footer-btn:hover{background:var(--panel);color:var(--text);border-color:var(--border2)}
+.sb-footer-btn.danger:hover{background:rgba(239,68,68,.15);color:var(--red);border-color:var(--red)}
+
+/* ─── HEADER ─────────────────────────────────────────────── */
+#header{height:var(--hdr);background:var(--sb);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;position:sticky;top:0;z-index:90}
+.hdr-title{font-size:1rem;font-weight:700;flex:1}
+.hdr-pill{padding:4px 12px;border-radius:99px;font-size:.73rem;font-weight:600;border:1px solid var(--border)}
+.hdr-pill.online{background:rgba(34,197,94,.15);color:var(--green);border-color:rgba(34,197,94,.3)}
+.hdr-pill.offline{background:rgba(239,68,68,.12);color:var(--red);border-color:rgba(239,68,68,.3)}
+.hdr-pill.connecting{background:rgba(249,115,22,.12);color:var(--orange);border-color:rgba(249,115,22,.3)}
+
+/* ─── CONTENT ─────────────────────────────────────────────── */
+#content{padding:20px;flex:1}
+.page{display:none}
+.page.active{display:block}
+
+/* ─── STAT GRID ─────────────────────────────────────────────── */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px;margin-bottom:20px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:6px;transition:border .2s}
+.stat-card:hover{border-color:var(--border2)}
+.stat-card-icon{font-size:1.5rem;margin-bottom:4px}
+.stat-card-label{font-size:.72rem;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px}
+.stat-card-value{font-size:1.4rem;font-weight:800;color:var(--text)}
+.stat-card-sub{font-size:.72rem;color:var(--muted2)}
+
+/* ─── INFO GRID ─────────────────────────────────────────────── */
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.info-panel{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px}
+.info-panel-title{font-size:.8rem;font-weight:700;color:var(--muted2);margin-bottom:14px;text-transform:uppercase;letter-spacing:.6px}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)}
+.info-row:last-child{border-bottom:none}
+.info-label{font-size:.78rem;color:var(--muted2)}
+.info-val{font-size:.82rem;font-weight:600;color:var(--text)}
+
+/* ─── BUTTONS ─────────────────────────────────────────────── */
+.btn{padding:8px 16px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.btn-primary:hover{opacity:.85}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text)}
+.btn-outline:hover{background:var(--panel);border-color:var(--accent)}
+.btn-danger{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:var(--red)}
+.btn-danger:hover{background:rgba(239,68,68,.25)}
+.btn-success{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:var(--green)}
+.btn-success:hover{background:rgba(34,197,94,.25)}
+.btn-sm{padding:5px 11px;font-size:.75rem}
+.btn-full{width:100%;justify-content:center}
+
+/* ─── PANEL ─────────────────────────────────────────────── */
+.panel{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px}
+.panel-title{font-size:.82rem;font-weight:700;color:var(--muted2);margin-bottom:16px;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:8px}
+.panel-title span{font-size:.9rem}
+
+/* ─── FORM ─────────────────────────────────────────────── */
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:.78rem;color:var(--muted2);margin-bottom:6px;font-weight:600}
+.form-input{width:100%;background:#060614;border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 12px;font-size:.88rem;outline:none;transition:border .2s}
+.form-input:focus{border-color:var(--accent)}
+textarea.form-input{resize:vertical;min-height:90px;font-family:monospace;font-size:.82rem}
+.form-hint{font-size:.72rem;color:var(--muted);margin-top:4px}
+
+/* ─── LOG CONSOLE ─────────────────────────────────────────────── */
+#log-console{height:400px;overflow-y:auto;background:#030310;border:1px solid var(--border);border-radius:var(--r);padding:12px;font-family:'Courier New',monospace;font-size:.76rem;line-height:1.6}
+.log-line{padding:1px 0;word-break:break-all}
+.log-line.warn{color:var(--yellow)}
+.log-line.error{color:var(--red)}
+.log-line.info{color:var(--accent2)}
+.log-line.log{color:#a0a0c8}
+.log-ts{color:var(--muted);margin-left:8px}
+
+/* ─── MESSAGES ─────────────────────────────────────────────── */
+#msg-feed{height:350px;overflow-y:auto;background:#030310;border:1px solid var(--border);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:6px}
+.msg-item{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:8px 12px}
+.msg-header{display:flex;gap:8px;margin-bottom:4px;font-size:.72rem}
+.msg-uid{color:var(--accent3);font-weight:700}
+.msg-tid{color:var(--accent2)}
+.msg-ts{color:var(--muted);margin-right:auto}
+.msg-body{font-size:.82rem;color:var(--text);word-break:break-word}
+
+/* ─── SEND FORM ─────────────────────────────────────────────── */
+.send-row{display:flex;gap:8px;margin-top:12px}
+.send-row .form-input{flex:1}
+
+/* ─── ADMIN LIST ─────────────────────────────────────────────── */
+.admin-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.admin-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--panel);border:1px solid var(--border);border-radius:9px}
+.admin-icon{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0}
+.admin-id{flex:1;font-size:.82rem;color:var(--text);font-family:monospace}
+.admin-badge{padding:2px 8px;border-radius:99px;font-size:.65rem;font-weight:700}
+.admin-badge.owner{background:rgba(234,179,8,.15);color:var(--yellow);border:1px solid rgba(234,179,8,.3)}
+.admin-badge.admin{background:rgba(124,108,252,.15);color:var(--accent3);border:1px solid rgba(124,108,252,.3)}
+
+/* ─── COMMANDS ─────────────────────────────────────────────── */
+.cmd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.cmd-card{background:var(--panel);border:1px solid var(--border);border-radius:9px;padding:12px 16px;transition:border .2s}
+.cmd-card:hover{border-color:var(--accent)}
+.cmd-name{font-size:.9rem;font-weight:700;color:var(--accent3);margin-bottom:4px}
+.cmd-aliases{font-size:.7rem;color:var(--muted2)}
+.cmd-cat{font-size:.65rem;padding:2px 8px;border-radius:99px;background:rgba(0,212,255,.1);color:var(--accent2);border:1px solid rgba(0,212,255,.2);display:inline-block;margin-top:6px}
+
+/* ─── TOAST ─────────────────────────────────────────────── */
+#toast-container{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:9999;pointer-events:none;align-items:center}
+.toast{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:.82rem;font-weight:600;opacity:0;transition:all .3s;pointer-events:none;min-width:200px;text-align:center}
+.toast.show{opacity:1}
+.toast.success{border-color:rgba(34,197,94,.4);color:var(--green)}
+.toast.error{border-color:rgba(239,68,68,.4);color:var(--red)}
+.toast.info{border-color:rgba(124,108,252,.4);color:var(--accent3)}
+
+/* ─── PROGRESS BAR ─────────────────────────────────────────────── */
+.progress-bar-bg{background:var(--border);border-radius:4px;height:8px;overflow:hidden}
+.progress-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .5s}
+
+/* ─── PROTECTION BADGES ─────────────────────────────────────────────── */
+.prot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.prot-item{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--panel);border:1px solid rgba(34,197,94,.2);border-radius:8px;font-size:.78rem}
+.prot-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green);flex-shrink:0;animation:blink 2s infinite}
+
+/* ─── RESPONSIVE ─────────────────────────────────────────────── */
+@media(max-width:768px){
+  #sidebar{transform:translateX(var(--sb-w));right:0}
+  #sidebar.open{transform:translateX(0)}
+  #main{margin-right:0}
+  #menu-btn{display:flex}
+  .info-grid{grid-template-columns:1fr}
+  .stat-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){.stat-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="lc">
+    <div class="lc-icon">🤖</div>
+    <div class="lc-title">DAVID V1</div>
+    <div class="lc-sub">DjamelBot Engine — لوحة التحكم</div>
+    <input id="pass-input" type="password" placeholder="كلمة المرور" autocomplete="current-password"/>
+    <button class="lc-btn" onclick="doLogin()">🔐 دخول</button>
+    <div class="lc-err" id="login-err"></div>
+    <div class="lc-copy">Copyright © DJAMEL — All rights reserved</div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast-container"></div>
+
+<!-- MENU BUTTON -->
+<button id="menu-btn" onclick="toggleSidebar()">☰</button>
+<div id="overlay" onclick="closeSidebar()"></div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="sb-header">
+      <div class="sb-logo">
+        <div class="sb-logo-icon">🤖</div>
+        <div>
+          <div class="sb-logo-text">DAVID V1</div>
+          <div class="sb-logo-sub">DjamelBot Engine</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sb-status">
+      <div class="sb-dot" id="sb-dot"></div>
+      <div class="sb-status-text" id="sb-status-text">جارٍ الاتصال…</div>
+    </div>
+
+    <nav class="sb-nav">
+      <div class="sb-nav-item active" data-page="overview" onclick="showPage('overview',this)">
+        <span class="sb-nav-icon">📊</span> نظرة عامة
+      </div>
+      <div class="sb-nav-item" data-page="logs" onclick="showPage('logs',this)">
+        <span class="sb-nav-icon">📋</span> السجلات
+      </div>
+      <div class="sb-nav-item" data-page="messages" onclick="showPage('messages',this)">
+        <span class="sb-nav-icon">💬</span> الرسائل
+      </div>
+      <div class="sb-nav-item" data-page="commands" onclick="showPage('commands',this)">
+        <span class="sb-nav-icon">⚡</span> الأوامر
+      </div>
+      <div class="sb-nav-item" data-page="protection" onclick="showPage('protection',this)">
+        <span class="sb-nav-icon">🛡️</span> الحماية
+      </div>
+      <div class="sb-nav-item" data-page="admins" onclick="showPage('admins',this)">
+        <span class="sb-nav-icon">👑</span> الأدمن
+      </div>
+      <div class="sb-nav-item" data-page="cookie" onclick="showPage('cookie',this)">
+        <span class="sb-nav-icon">🍪</span> الكوكيز
+      </div>
+      <div class="sb-nav-item" data-page="send" onclick="showPage('send',this)">
+        <span class="sb-nav-icon">📤</span> إرسال رسالة
+      </div>
+    </nav>
+
+    <div class="sb-footer">
+      <div class="sb-footer-row">
+        <button class="sb-footer-btn" onclick="restartBot()">🔄 إعادة تشغيل</button>
+        <button class="sb-footer-btn danger" onclick="doLogout()">🚪 خروج</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div id="header">
+      <div style="width:32px"></div>
+      <div class="hdr-title" id="hdr-title">📊 نظرة عامة</div>
+      <div class="hdr-pill offline" id="hdr-pill">● غير متصل</div>
+    </div>
+
+    <div id="content">
+
+      <!-- OVERVIEW PAGE -->
+      <div class="page active" id="page-overview">
+        <div class="stat-grid" id="stat-grid">
+          <div class="stat-card"><div class="stat-card-icon">⏱️</div><div class="stat-card-label">وقت التشغيل</div><div class="stat-card-value" id="st-uptime">—</div></div>
+          <div class="stat-card"><div class="stat-card-icon">⚡</div><div class="stat-card-label">الأوامر</div><div class="stat-card-value" id="st-cmds">—</div></div>
+          <div class="stat-card"><div class="stat-card-icon">👑</div><div class="stat-card-label">الأدمن</div><div class="stat-card-value" id="st-admins">—</div></div>
+          <div class="stat-card"><div class="stat-card-icon">🛡️</div><div class="stat-card-label">الحماية</div><div class="stat-card-value" id="st-prot">16</div></div>
+          <div class="stat-card"><div class="stat-card-icon">🧠</div><div class="stat-card-label">RAM Heap</div><div class="stat-card-value" id="st-heap">—</div></div>
+          <div class="stat-card"><div class="stat-card-icon">🖥️</div><div class="stat-card-label">RAM System</div><div class="stat-card-value" id="st-sys">—</div></div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-panel">
+            <div class="info-panel-title"><span>🤖</span> معلومات البوت</div>
+            <div class="info-row"><span class="info-label">الاسم</span><span class="info-val" id="inf-name">DAVID V1</span></div>
+            <div class="info-row"><span class="info-label">الإصدار</span><span class="info-val" id="inf-ver">1.0.0</span></div>
+            <div class="info-row"><span class="info-label">المطور</span><span class="info-val">DJAMEL</span></div>
+            <div class="info-row"><span class="info-label">المحرك</span><span class="info-val">DjamelBot</span></div>
+            <div class="info-row"><span class="info-label">المكتبة</span><span class="info-val">Djamel-fca</span></div>
+            <div class="info-row"><span class="info-label">البادئة</span><span class="info-val" id="inf-prefix">/</span></div>
+          </div>
+          <div class="info-panel">
+            <div class="info-panel-title"><span>⚙️</span> حالة النظام</div>
+            <div class="info-row"><span class="info-label">الاتصال</span><span class="info-val" id="inf-conn">—</span></div>
+            <div class="info-row"><span class="info-label">الكوكيز</span><span class="info-val" id="inf-cookie">—</span></div>
+            <div class="info-row"><span class="info-label">Owner ID</span><span class="info-val" id="inf-owner">—</span></div>
+            <div class="info-row"><span class="info-label">Heap Used</span><span class="info-val" id="inf-heap">—</span></div>
+            <div class="info-row"><span class="info-label">Heap Total</span><span class="info-val" id="inf-heapt">—</span></div>
+            <div class="info-row"><span class="info-label">System RAM</span><span class="info-val" id="inf-sysram">—</span></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title"><span>📊</span> إحصائيات قاعدة البيانات</div>
+          <div class="stat-grid">
+            <div class="stat-card"><div class="stat-card-icon">👥</div><div class="stat-card-label">المستخدمون</div><div class="stat-card-value" id="db-users">—</div></div>
+            <div class="stat-card"><div class="stat-card-icon">💬</div><div class="stat-card-label">المجموعات</div><div class="stat-card-value" id="db-threads">—</div></div>
+            <div class="stat-card"><div class="stat-card-icon">⚡</div><div class="stat-card-label">الأوامر المنفذة</div><div class="stat-card-value" id="db-cmds">—</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOGS PAGE -->
+      <div class="page" id="page-logs">
+        <div class="panel">
+          <div class="panel-title"><span>📋</span> سجلات البوت الحية</div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <button class="btn btn-outline btn-sm" onclick="clearLogs()">🗑️ مسح</button>
+            <button class="btn btn-outline btn-sm" onclick="scrollLogsBottom()">⬇️ الأسفل</button>
+            <label style="display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted2);cursor:pointer">
+              <input type="checkbox" id="auto-scroll" checked style="accent-color:var(--accent)"/>
+              تمرير تلقائي
+            </label>
+          </div>
+          <div id="log-console"></div>
+        </div>
+      </div>
+
+      <!-- MESSAGES PAGE -->
+      <div class="page" id="page-messages">
+        <div class="panel">
+          <div class="panel-title"><span>💬</span> الرسائل الواردة (للأدمن فقط)</div>
+          <div id="msg-feed"></div>
+        </div>
+      </div>
+
+      <!-- COMMANDS PAGE -->
+      <div class="page" id="page-commands">
+        <div class="panel">
+          <div class="panel-title"><span>⚡</span> الأوامر المتاحة</div>
+          <div class="cmd-grid" id="cmd-grid">
+            <div style="color:var(--muted2);font-size:.82rem">جارٍ التحميل…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROTECTION PAGE -->
+      <div class="page" id="page-protection">
+        <div class="panel">
+          <div class="panel-title"><span>🛡️</span> أنظمة الحماية (16 نظام)</div>
+          <div class="prot-grid">
+            <div class="prot-item"><span class="prot-dot"></span> Presence Cycling (L1)</div>
+            <div class="prot-item"><span class="prot-dot"></span> Human Read Receipt (L2)</div>
+            <div class="prot-item"><span class="prot-dot"></span> Natural Presence (L3)</div>
+            <div class="prot-item"><span class="prot-dot"></span> Sleep Mode (L4)</div>
+            <div class="prot-item"><span class="prot-dot"></span> UA Rotation (L5)</div>
+            <div class="prot-item"><span class="prot-dot"></span> Rate Limiting (L6)</div>
+            <div class="prot-item"><span class="prot-dot"></span> Outgoing Throttle (L7)</div>
+            <div class="prot-item"><span class="prot-dot"></span> Connection Jitter (L8)</div>
+            <div class="prot-item"><span class="prot-dot"></span> Duplicate Guard (L9)</div>
+            <div class="prot-item"><span class="prot-dot"></span> Human Typing (L10)</div>
+            <div class="prot-item"><span class="prot-dot"></span> Action Jitter (L11)</div>
+            <div class="prot-item"><span class="prot-dot"></span> MQTT Health Check (L12)</div>
+            <div class="prot-item"><span class="prot-dot"></span> Keep-Alive Ping (L13)</div>
+            <div class="prot-item"><span class="prot-dot"></span> Cookie Freshness (L14)</div>
+            <div class="prot-item"><span class="prot-dot"></span> Session Refresher (L15)</div>
+            <div class="prot-item"><span class="prot-dot"></span> Anti-Detection (L16)</div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title"><span>📡</span> معلومات إضافية</div>
+          <div class="info-row"><span class="info-label">نوع الاتصال</span><span class="info-val">MQTT → Long-Poll → Custom Poller</span></div>
+          <div class="info-row"><span class="info-label">محاولات MQTT</span><span class="info-val">4 محاولات قبل التبديل</span></div>
+          <div class="info-row"><span class="info-label">محاولات Long-Poll</span><span class="info-val">3 محاولات قبل Custom Poller</span></div>
+          <div class="info-row"><span class="info-label">Admin Filter</span><span class="info-val">تجاهل تام لغير الأدمن ✔</span></div>
+        </div>
+      </div>
+
+      <!-- ADMINS PAGE -->
+      <div class="page" id="page-admins">
+        <div class="panel">
+          <div class="panel-title"><span>👑</span> الأدمن والمالك</div>
+          <div class="admin-list" id="admin-list"></div>
+          <div class="panel-title"><span>➕</span> إضافة أدمن</div>
+          <div class="form-group">
+            <label class="form-label">Facebook ID الخاص بالأدمن</label>
+            <input id="add-admin-input" type="text" class="form-input" placeholder="مثال: 100012345678"/>
+          </div>
+          <button class="btn btn-primary" onclick="addAdmin()">➕ إضافة</button>
+        </div>
+        <div class="panel">
+          <div class="panel-title"><span>🔑</span> تعيين المالك (Owner)</div>
+          <div class="form-group">
+            <label class="form-label">Owner Facebook ID</label>
+            <input id="owner-input" type="text" class="form-input" placeholder="مثال: 100012345678"/>
+            <div class="form-hint">⚠️ المالك يملك كامل الصلاحيات</div>
+          </div>
+          <button class="btn btn-primary" onclick="setOwner()">💾 حفظ</button>
+        </div>
+      </div>
+
+      <!-- COOKIE PAGE -->
+      <div class="page" id="page-cookie">
+        <div class="panel">
+          <div class="panel-title"><span>🍪</span> رفع كوكيز فيسبوك</div>
+          <div class="form-group">
+            <label class="form-label">الكوكي (JSON أو نص Cookie)</label>
+            <textarea id="cookie-input" class="form-input" placeholder='الصق الكوكي هنا...'></textarea>
+            <div class="form-hint">يدعم: JSON Array | Cookie String | Netscape format</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="saveCookie()">💾 حفظ وإعادة تشغيل</button>
+            <button class="btn btn-outline" onclick="loadCookie()">📖 تحميل الحالي</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEND PAGE -->
+      <div class="page" id="page-send">
+        <div class="panel">
+          <div class="panel-title"><span>📤</span> إرسال رسالة مباشرة</div>
+          <div class="form-group">
+            <label class="form-label">Thread ID أو User ID</label>
+            <input id="send-thread" type="text" class="form-input" placeholder="مثال: 100012345678"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">الرسالة</label>
+            <textarea id="send-msg" class="form-input" placeholder="اكتب رسالتك هنا…"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="sendMsg()">📤 إرسال</button>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let TOKEN  = localStorage.getItem("david_token") || "";
+let socket = null;
+let botStatus = "offline";
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function toast(msg, type = "info", dur = 3000) {
+  const c = document.getElementById("toast-container");
+  const el = document.createElement("div");
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  c.appendChild(el);
+  requestAnimationFrame(() => { el.classList.add("show"); });
+  setTimeout(() => { el.classList.remove("show"); setTimeout(() => el.remove(), 350); }, dur);
+}
+
+// ─── API ──────────────────────────────────────────────────────────────────────
+async function api(method, url, body) {
+  try {
+    const opts = { method, headers: { "Content-Type": "application/json", "Authorization": TOKEN } };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(url, opts);
+    const d = await r.json();
+    return { ok: r.ok, data: d };
+  } catch (e) { return { ok: false, data: { error: e.message } }; }
+}
+
+// ─── Login ────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const pass = document.getElementById("pass-input").value.trim();
+  if (!pass) return document.getElementById("login-err").textContent = "أدخل كلمة المرور";
+  const { ok, data } = await api("POST", "/api/login", { password: pass });
+  if (!ok || !data.token) { document.getElementById("login-err").textContent = data.error || "خطأ"; return; }
+  TOKEN = data.token;
+  localStorage.setItem("david_token", TOKEN);
+  showApp();
+}
+
+document.getElementById("pass-input").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+
+async function doLogout() {
+  await api("POST", "/api/logout");
+  TOKEN = "";
+  localStorage.removeItem("david_token");
+  location.reload();
+}
+
+// ─── App startup ──────────────────────────────────────────────────────────────
+async function checkAuth() {
+  if (!TOKEN) return;
+  const { ok } = await api("GET", "/api/stats");
+  if (ok) showApp();
+  else { TOKEN = ""; localStorage.removeItem("david_token"); }
+}
+
+function showApp() {
+  document.getElementById("login-screen").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  initSocket();
+  loadStats();
+  loadDbStats();
+  loadCommands();
+  loadAdmins();
+}
+
+// ─── Socket.IO ────────────────────────────────────────────────────────────────
+function initSocket() {
+  socket = io({ auth: { token: TOKEN }, query: { token: TOKEN } });
+
+  socket.on("connect", () => updateBotDot("connecting", "جارٍ الاتصال…"));
+  socket.on("disconnect", () => updateBotDot("offline", "انقطع الاتصال"));
+
+  socket.on("bot-status", ({ status, message }) => {
+    botStatus = status;
+    updateBotDot(status, message || status);
+    const pill = document.getElementById("hdr-pill");
+    pill.className = `hdr-pill ${status}`;
+    pill.textContent = `● ${status === "online" ? "متصل" : status === "connecting" ? "جارٍ الاتصال" : "غير متصل"}`;
+    if (document.getElementById("inf-conn")) document.getElementById("inf-conn").textContent = message || status;
+  });
+
+  socket.on("log", entry => appendLog(entry));
+  socket.on("log-history", entries => { document.getElementById("log-console").innerHTML = ""; entries.forEach(appendLog); });
+
+  socket.on("message", msg => appendMsg(msg));
+  socket.on("message-history", msgs => { msgs.forEach(appendMsg); });
+
+  socket.on("connect_error", () => updateBotDot("offline", "خطأ في اتصال Socket"));
+}
+
+function updateBotDot(status, text) {
+  const dot = document.getElementById("sb-dot");
+  dot.className = "sb-dot " + status;
+  document.getElementById("sb-status-text").textContent = text;
+}
+
+// ─── Logs ─────────────────────────────────────────────────────────────────────
+function appendLog({ level, msg, ts }) {
+  const el   = document.getElementById("log-console");
+  const line = document.createElement("div");
+  line.className = `log-line ${level}`;
+  const time = new Date(ts).toLocaleTimeString("ar");
+  line.innerHTML = `<span class="log-ts">${time}</span> ${escHtml(msg)}`;
+  el.appendChild(line);
+  if (el.children.length > 600) el.removeChild(el.firstChild);
+  const auto = document.getElementById("auto-scroll");
+  if (!auto || auto.checked) el.scrollTop = el.scrollHeight;
+}
+
+function clearLogs() { document.getElementById("log-console").innerHTML = ""; }
+function scrollLogsBottom() { const el = document.getElementById("log-console"); el.scrollTop = el.scrollHeight; }
+
+// ─── Messages ─────────────────────────────────────────────────────────────────
+function appendMsg({ senderID, threadID, body, ts }) {
+  const el   = document.getElementById("msg-feed");
+  const item = document.createElement("div");
+  item.className = "msg-item";
+  const time = new Date(ts).toLocaleTimeString("ar");
+  item.innerHTML = `
+    <div class="msg-header">
+      <span class="msg-uid">👤 ${escHtml(senderID)}</span>
+      <span class="msg-tid">📍 ${escHtml(String(threadID))}</span>
+      <span class="msg-ts">${time}</span>
+    </div>
+    <div class="msg-body">${escHtml(body || "")}</div>
+  `;
+  el.appendChild(item);
+  if (el.children.length > 60) el.removeChild(el.firstChild);
+  el.scrollTop = el.scrollHeight;
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  const { ok, data } = await api("GET", "/api/stats");
+  if (!ok) return;
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || "—"; };
+  set("st-uptime", data.uptime);
+  set("st-cmds", data.commands);
+  set("st-admins", data.admins);
+  set("st-heap", data.memHeap);
+  set("st-sys", data.sysUsed);
+  set("inf-name", data.botName);
+  set("inf-ver", data.version);
+  set("inf-prefix", data.prefix);
+  set("inf-cookie", data.cookie);
+  set("inf-owner", data.ownerID || "—");
+  set("inf-heap", data.memHeap);
+  set("inf-heapt", data.memTotal);
+  set("inf-sysram", `${data.sysUsed} / ${data.sysTotal}`);
+  if (data.online) { set("inf-conn", "✅ متصل"); } else { set("inf-conn", "❌ غير متصل"); }
+}
+
+async function loadDbStats() {
+  const { ok, data } = await api("GET", "/api/db-stats");
+  if (!ok) return;
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val ?? "0"; };
+  set("db-users", data.totalUsers);
+  set("db-threads", data.totalThreads);
+  set("db-cmds", data.totalCommands);
+}
+
+// ─── Commands ─────────────────────────────────────────────────────────────────
+async function loadCommands() {
+  const { ok, data } = await api("GET", "/api/commands");
+  if (!ok) return;
+  const grid = document.getElementById("cmd-grid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  if (!data.length) { grid.innerHTML = '<div style="color:var(--muted2)">لا توجد أوامر محمّلة</div>'; return; }
+  data.forEach(cmd => {
+    const el = document.createElement("div");
+    el.className = "cmd-card";
+    el.innerHTML = `
+      <div class="cmd-name">/${escHtml(cmd.name)}</div>
+      ${cmd.aliases.length ? `<div class="cmd-aliases">أسماء بديلة: ${cmd.aliases.map(a => '/'+escHtml(a)).join(", ")}</div>` : ""}
+      <span class="cmd-cat">${escHtml(cmd.category)}</span>
+    `;
+    grid.appendChild(el);
+  });
+}
+
+// ─── Admins ───────────────────────────────────────────────────────────────────
+async function loadAdmins() {
+  const { ok, data } = await api("GET", "/api/admins");
+  if (!ok) return;
+  const list = document.getElementById("admin-list");
+  if (!list) return;
+  list.innerHTML = "";
+
+  const addItem = (id, role) => {
+    const el = document.createElement("div");
+    el.className = "admin-item";
+    el.innerHTML = `
+      <div class="admin-icon">${role === "owner" ? "👑" : "🛡️"}</div>
+      <div class="admin-id">${escHtml(id)}</div>
+      <span class="admin-badge ${role}">${role === "owner" ? "مالك" : "أدمن"}</span>
+      ${role !== "owner" ? `<button class="btn btn-danger btn-sm" onclick="removeAdmin('${escHtml(id)}')">🗑️</button>` : ""}
+    `;
+    list.appendChild(el);
+  };
+
+  if (data.ownerID) addItem(data.ownerID, "owner");
+  (data.adminIDs || []).forEach(id => addItem(id, "admin"));
+  if (!data.ownerID && !(data.adminIDs||[]).length) list.innerHTML = '<div style="color:var(--muted2);font-size:.82rem">لا يوجد أدمن حتى الآن</div>';
+
+  // Set owner input
+  const ownerIn = document.getElementById("owner-input");
+  if (ownerIn) ownerIn.value = data.ownerID || "";
+}
+
+async function addAdmin() {
+  const input = document.getElementById("add-admin-input");
+  const fbid  = (input?.value || "").trim();
+  if (!fbid) return toast("أدخل Facebook ID", "error");
+  const { ok, data } = await api("POST", "/api/admins/add", { fbid });
+  if (ok) { toast("✅ تمت الإضافة", "success"); input.value = ""; loadAdmins(); }
+  else toast(data.error || "خطأ", "error");
+}
+
+async function removeAdmin(fbid) {
+  const { ok } = await api("POST", "/api/admins/remove", { fbid });
+  if (ok) { toast("✅ تم الحذف", "success"); loadAdmins(); }
+  else toast("خطأ في الحذف", "error");
+}
+
+async function setOwner() {
+  const ownerID = document.getElementById("owner-input")?.value.trim();
+  if (!ownerID) return toast("أدخل Owner ID", "error");
+  const { ok, data } = await api("POST", "/api/owner", { ownerID });
+  if (ok) { toast("✅ تم تعيين المالك", "success"); loadAdmins(); }
+  else toast(data.error || "خطأ", "error");
+}
+
+// ─── Cookie ───────────────────────────────────────────────────────────────────
+async function saveCookie() {
+  const cookie = document.getElementById("cookie-input")?.value.trim();
+  if (!cookie) return toast("الحقل فارغ", "error");
+  const { ok, data } = await api("POST", "/api/cookie", { cookie });
+  if (ok) { toast(`✅ تم الحفظ (${data.count} كوكي) — جارٍ إعادة التشغيل…`, "success"); setTimeout(restartBot, 1500); }
+  else toast(data.error || "خطأ في تحليل الكوكي", "error");
+}
+
+async function loadCookie() {
+  const { ok, data } = await api("GET", "/api/cookie");
+  if (!ok) return toast("خطأ", "error");
+  const input = document.getElementById("cookie-input");
+  if (input) input.value = data.cookie || "";
+  toast("✅ تم التحميل", "success");
+}
+
+// ─── Restart ─────────────────────────────────────────────────────────────────
+async function restartBot() {
+  toast("🔄 جارٍ إعادة تشغيل البوت…", "info");
+  await api("POST", "/api/restart");
+}
+
+// ─── Send message ─────────────────────────────────────────────────────────────
+async function sendMsg() {
+  const threadID = document.getElementById("send-thread")?.value.trim();
+  const message  = document.getElementById("send-msg")?.value.trim();
+  if (!threadID || !message) return toast("Thread ID والرسالة مطلوبان", "error");
+  const { ok, data } = await api("POST", "/api/send", { threadID, message });
+  if (ok) { toast("✅ تم الإرسال", "success"); document.getElementById("send-msg").value = ""; }
+  else toast(data.error || "خطأ في الإرسال", "error");
+}
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+const PAGE_TITLES = { overview: "📊 نظرة عامة", logs: "📋 السجلات", messages: "💬 الرسائل", commands: "⚡ الأوامر", protection: "🛡️ الحماية", admins: "👑 الأدمن", cookie: "🍪 الكوكيز", send: "📤 إرسال رسالة" };
+
+function showPage(id, el) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".sb-nav-item").forEach(n => n.classList.remove("active"));
+  const page = document.getElementById(`page-${id}`);
+  if (page) page.classList.add("active");
+  if (el)   el.classList.add("active");
+  const title = document.getElementById("hdr-title");
+  if (title) title.textContent = PAGE_TITLES[id] || id;
+  closeSidebar();
+
+  if (id === "overview") { loadStats(); loadDbStats(); }
+  if (id === "admins")   loadAdmins();
+  if (id === "commands") loadCommands();
+}
+
+function toggleSidebar() {
+  document.getElementById("sidebar").classList.toggle("open");
+  document.getElementById("overlay").style.display = document.getElementById("sidebar").classList.contains("open") ? "block" : "none";
+}
+function closeSidebar() {
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("overlay").style.display = "none";
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// ─── Auto refresh stats ───────────────────────────────────────────────────────
+setInterval(() => { if (document.getElementById("page-overview").classList.contains("active")) { loadStats(); loadDbStats(); } }, 30000);
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+checkAuth();
+</script>
+</body>
+</html>

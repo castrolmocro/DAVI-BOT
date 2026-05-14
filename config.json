@@ -2,67 +2,24 @@
   "botName": "DAVID V1",
   "botVersion": "1.0.0",
   "author": "DJAMEL",
-
+  "prefix": "/",
+  "language": "ar",
+  "timezone": "Africa/Algiers",
+  "ownerID": "100012345678",
+  "adminIDs": [],
+  "userAgent": "Mozilla/5.0 (Linux; Android 12; M2102J20SG) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.0.0 Mobile Safari/537.36",
+  "dashboard": {
+    "port": 5000,
+    "password": "djamel2025*"
+  },
   "facebookAccount": {
     "email": "",
-    "password": "",
-    "2FASecret": "",
-    "userAgent": "Mozilla/5.0 (Linux; Android 12; M2102J20SG) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.0.0 Mobile Safari/537.36",
-    "intervalGetNewCookie": 1440
+    "password": ""
   },
-
-  "prefix": "/",
-  "language": "en",
-  "timeZone": "Africa/Algiers",
-
-  "nickNameBot": "— DAVID V1",
-
-  "adminBot": [],
-  "superAdminBot": [],
-
-  "noteAdminBot": "Add Facebook user IDs here. These are the only users who can use the bot.",
-
-  "antiInbox": false,
-  "adminOnly": {
-    "enable": true,
-    "ignoreCommand": []
-  },
-
   "stealth": {
     "enable": true,
-    "sleepHourStart": 1,
-    "sleepHourEnd": 8
+    "sleepStart": 1,
+    "sleepEnd": 7
   },
-
-  "protection": {
-    "enable": true,
-    "layers": 20,
-    "rateLimit": {
-      "maxMessagesPerMinute": 30,
-      "maxCommandsPerMinute": 10,
-      "cooldownSeconds": 15
-    },
-    "cookieProtection": {
-      "enable": true,
-      "checkIntervalMinutes": 30,
-      "autoRefresh": true
-    }
-  },
-
-  "dashboard": {
-    "enable": true,
-    "port": 5000,
-    "adminUsername": "admin",
-    "adminPassword": "david_v1_2024",
-    "sessionSecret": "david_v1_super_secret_key_djamel"
-  },
-
-  "credentials": {
-    "gmailAccount": {
-      "clientId": "",
-      "clientSecret": "",
-      "refreshToken": "",
-      "apiKey": ""
-    }
-  }
+  "pollIntervalMs": 6000
 }

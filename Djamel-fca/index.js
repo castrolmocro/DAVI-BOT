@@ -1,142 +1,80 @@
 /**
  * ╔══════════════════════════════════════════════════════════╗
- * ║        Djamel-fca — Facebook Client Abstractions        ║
- * ║        A مكاتب (library) for DAVID V1                  ║
- * ║        Copyright © DJAMEL — All rights reserved        ║
+ * ║     Djamel-fca — مكتبة Facebook Client Abstractions     ║
+ * ║     المكتبة الرسمية للـ DAVID V1 — DjamelBot Engine    ║
+ * ║     Copyright © DJAMEL — All rights reserved            ║
  * ╚══════════════════════════════════════════════════════════╝
- *
- * This library provides high-level abstractions over the fca-eryxenx
- * (Facebook Client API) for use with DAVID V1 bot engine.
- *
- * Features:
- *  - Human-like message sending with typing simulation
- *  - Cookie management & validation utilities
- *  - Message queue with rate limiting
- *  - Thread & user info helpers
- *  - Safe wrappers for common FCA operations
  */
 
 "use strict";
 
-// ─── Human-like send ─────────────────────────────────────────────────────────
+const rand  = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+const sleep = (ms)   => new Promise(r => setTimeout(r, ms));
 
 /**
- * Send a message with human-like delay and typing indicator.
- * @param {object} api   - FCA API instance
- * @param {string} msg   - Message to send (string or object)
- * @param {string} tid   - Thread ID
- * @param {string} [mid] - Message ID to reply to (optional)
+ * إرسال رسالة بتأخير بشري واقعي
  */
-async function humanSend(api, msg, tid, mid) {
-  const body   = typeof msg === "string" ? msg : msg?.body || "";
-  const delay  = calcDelay(body);
+async function humanSend(api, msg, threadID, replyMID) {
+  const body  = typeof msg === "string" ? msg : (msg?.body || "");
+  const words = body.split(/\s+/).length;
+  const delay = Math.min(Math.max(words * rand(55, 110), 900), 7000);
 
-  // Typing indicator
   try {
-    const stop = api.sendTypingIndicator?.(tid);
+    const stop = api.sendTypingIndicator?.(threadID);
     await sleep(delay);
     if (typeof stop === "function") stop();
-  } catch (_) {
-    await sleep(delay);
-  }
+  } catch (_) { await sleep(delay); }
 
-  // Add jitter before sending
-  await sleep(randInt(150, 600));
+  await sleep(rand(150, 500));
 
   return new Promise((res, rej) => {
     const cb = (err, info) => err ? rej(err) : res(info);
-    if (mid) api.sendMessage(msg, tid, cb, mid);
-    else     api.sendMessage(msg, tid, cb);
+    if (replyMID) api.sendMessage(msg, threadID, cb, replyMID);
+    else          api.sendMessage(msg, threadID, cb);
   });
 }
 
-/**
- * Calculate realistic typing delay based on message length.
- */
+/** حساب التأخير البشري الواقعي */
 function calcDelay(text) {
-  if (!text || typeof text !== "string") return 1_200;
-  const base   = Math.min(Math.max(text.length * 52, 1_000), 7_000);
-  const jitter = randInt(-250, 250);
-  return base + jitter;
+  if (!text || typeof text !== "string") return 1200;
+  return Math.min(Math.max(text.length * 52, 1000), 7000) + rand(-300, 300);
 }
 
-// ─── Cookie utilities ─────────────────────────────────────────────────────────
-
-/**
- * Convert appState array to cookie string format.
- */
+/** تحويل appState إلى نص Cookie */
 function appStateToCookieString(appState) {
-  if (!Array.isArray(appState)) return "";
-  return appState.map(c => `${c.key}=${c.value}`).join("; ");
+  return Array.isArray(appState) ? appState.map(c => `${c.key}=${c.value}`).join("; ") : "";
 }
 
-/**
- * Parse a cookie string into a basic appState array.
- */
-function cookieStringToAppState(cookieStr) {
-  return cookieStr.split(";").map(pair => {
-    const [key, ...rest] = pair.trim().split("=");
-    return {
-      key:    key.trim(),
-      value:  rest.join("=").trim(),
-      domain: ".facebook.com",
-      path:   "/",
-    };
-  }).filter(c => c.key);
-}
-
-/**
- * Check if an appState has the required Facebook cookies.
- */
+/** التحقق من صحة appState */
 function isValidAppState(appState) {
-  if (!Array.isArray(appState) || appState.length === 0) return false;
-  const required = ["c_user", "xs"];
+  if (!Array.isArray(appState) || !appState.length) return false;
   const keys = appState.map(c => c.key);
-  return required.every(k => keys.includes(k));
+  return keys.includes("c_user") && keys.includes("xs");
 }
 
-// ─── Thread helpers ───────────────────────────────────────────────────────────
-
-/**
- * Get thread info as a promise.
- */
+/** جلب معلومات المحادثة */
 function getThreadInfoAsync(api, threadID) {
-  return new Promise((res, rej) =>
-    api.getThreadInfo(threadID, (err, data) => err ? rej(err) : res(data))
-  );
+  return new Promise((res, rej) => api.getThreadInfo(threadID, (e, d) => e ? rej(e) : res(d)));
 }
 
-/**
- * Get user info as a promise.
- */
+/** جلب معلومات المستخدم */
 function getUserInfoAsync(api, userID) {
-  return new Promise((res, rej) =>
-    api.getUserInfo(userID, (err, data) => err ? rej(err) : res(data?.[userID] || null))
-  );
+  return new Promise((res, rej) => api.getUserInfo(userID, (e, d) => e ? rej(e) : res(d?.[userID] || null)));
 }
 
-/**
- * Set group title as a promise.
- */
+/** تغيير اسم المجموعة */
 function setTitleAsync(api, title, threadID) {
-  return new Promise((res, rej) =>
-    api.setTitle(title, threadID, (err) => err ? rej(err) : res())
-  );
+  return new Promise((res, rej) => api.setTitle(title, threadID, e => e ? rej(e) : res()));
 }
 
-/**
- * Change nickname as a promise.
- */
+/** تغيير كنية العضو */
 function changeNicknameAsync(api, nickname, threadID, participantID) {
-  return new Promise((res, rej) =>
-    api.changeNickname(nickname, threadID, participantID, (err) => err ? rej(err) : res())
-  );
+  return new Promise((res, rej) => api.changeNickname(nickname, threadID, participantID, e => e ? rej(e) : res()));
 }
 
-// ─── Message queue ────────────────────────────────────────────────────────────
-
+/** طابور الرسائل مع rate limiting */
 class MessageQueue {
-  constructor(minGap = 700, maxGap = 2_500) {
+  constructor(minGap = 700, maxGap = 2500) {
     this._queue   = [];
     this._running = false;
     this._minGap  = minGap;
@@ -154,8 +92,7 @@ class MessageQueue {
     this._running = true;
     while (this._queue.length > 0) {
       const { fn, resolve, reject } = this._queue.shift();
-      const gap = randInt(this._minGap, this._maxGap);
-      await sleep(gap);
+      await sleep(rand(this._minGap, this._maxGap));
       try { resolve(await fn()); } catch (e) { reject(e); }
     }
     this._running = false;
@@ -164,37 +101,18 @@ class MessageQueue {
   get length() { return this._queue.length; }
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
-
-// ─── Exports ──────────────────────────────────────────────────────────────────
-
 module.exports = {
-  // Human-like messaging
   humanSend,
   calcDelay,
-
-  // Cookie utilities
   appStateToCookieString,
-  cookieStringToAppState,
   isValidAppState,
-
-  // Thread/User helpers
   getThreadInfoAsync,
   getUserInfoAsync,
   setTitleAsync,
   changeNicknameAsync,
-
-  // Message queue
   MessageQueue,
-
-  // Primitives
   sleep,
-  randInt,
-
-  // Metadata
+  rand,
   version: "1.0.0",
   author:  "DJAMEL",
   name:    "Djamel-fca",

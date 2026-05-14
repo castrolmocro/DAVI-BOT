@@ -1,93 +1,54 @@
 /**
  * ╔══════════════════════════════════════════════════════════╗
- * ║              DAVID V1 — by DJAMEL                       ║
- * ║         Watchdog with exponential backoff               ║
+ * ║           DAVID V1 — Watchdog / Entry Point             ║
+ * ║           Copyright © DJAMEL — All rights reserved      ║
  * ╚══════════════════════════════════════════════════════════╝
- *
- * Copyright © DJAMEL — All rights reserved.
  */
 
-// ─── Node polyfills (required before any require()) ──────────────────────────
-if (typeof globalThis.ReadableStream === "undefined") {
-  try {
-    const { ReadableStream, WritableStream, TransformStream } = require("stream/web");
-    globalThis.ReadableStream  = ReadableStream;
-    globalThis.WritableStream  = WritableStream;
-    globalThis.TransformStream = TransformStream;
-  } catch (_) {}
-}
-if (typeof globalThis.Blob === "undefined") {
-  try { globalThis.Blob = require("buffer").Blob; } catch (_) {}
-}
+"use strict";
 
-const { spawn } = require("child_process");
-const log       = require("./logger/log.js");
+const { spawn }  = require("child_process");
+const path       = require("path");
+const chalk      = require("chalk");
 
-const MAX_RESTARTS       = 15;
-const BASE_DELAY_MS      = 3_000;
-const MAX_DELAY_MS       = 5 * 60 * 1_000;
-const RESET_AFTER_MS     = 10 * 60 * 1_000;
-const BACKOFF_MULTIPLIER = 1.8;
+const MAX_RESTARTS  = 15;
+const RESTART_DELAY = 5000;
 
 let restartCount = 0;
-let currentDelay = BASE_DELAY_MS;
-let stableTimer  = null;
+let child        = null;
 
-function resetCounters() {
-  restartCount = 0;
-  currentDelay = BASE_DELAY_MS;
-}
+function start() {
+  if (restartCount >= MAX_RESTARTS) {
+    console.error(chalk.red(`[WATCHDOG] Max restarts (${MAX_RESTARTS}) reached. Stopping.`));
+    process.exit(1);
+  }
 
-function startProject() {
-  const child = spawn("node", ["Goat.js"], {
-    cwd: __dirname,
+  restartCount++;
+  const entry = path.join(__dirname, "src", "index.js");
+
+  console.log(chalk.cyan(`\n[WATCHDOG] Starting DAVID V1... (attempt ${restartCount})`));
+
+  child = spawn(process.execPath, [entry], {
     stdio: "inherit",
-    shell: true,
+    env:   process.env,
   });
 
-  if (stableTimer) clearTimeout(stableTimer);
-  stableTimer = setTimeout(() => {
-    if (restartCount > 0) {
-      log.info("WATCHDOG", `Bot stable for ${RESET_AFTER_MS / 60000} min — resetting counter.`);
-      resetCounters();
-    }
-  }, RESET_AFTER_MS);
-
-  child.on("close", (code) => {
-    if (stableTimer) clearTimeout(stableTimer);
-
+  child.on("exit", (code, signal) => {
     if (code === 0) {
-      log.info("WATCHDOG", "Clean shutdown (code 0). Restarting in 3s...");
-      resetCounters();
-      setTimeout(() => startProject(), 3_000);
-      return;
+      console.log(chalk.green("[WATCHDOG] Bot exited cleanly."));
+      process.exit(0);
     }
-
-    restartCount++;
-
-    if (restartCount > MAX_RESTARTS) {
-      log.err(
-        "WATCHDOG",
-        `Bot crashed ${restartCount} times. MAX_RESTARTS exceeded.\nStopping to prevent infinite crash loop.`
-      );
-      process.exit(1);
-    }
-
-    log.warn(
-      "WATCHDOG",
-      `Crash detected (code ${code}). Restart ${restartCount}/${MAX_RESTARTS} in ${(currentDelay / 1000).toFixed(1)}s...`
-    );
-
-    setTimeout(() => {
-      currentDelay = Math.min(currentDelay * BACKOFF_MULTIPLIER, MAX_DELAY_MS);
-      startProject();
-    }, currentDelay);
+    console.log(chalk.yellow(`[WATCHDOG] Exited with code ${code} signal ${signal} — restarting in ${RESTART_DELAY / 1000}s...`));
+    setTimeout(start, RESTART_DELAY);
   });
 
   child.on("error", (err) => {
-    log.err("WATCHDOG", `Failed to start process: ${err.message}`);
+    console.error(chalk.red(`[WATCHDOG] Spawn error: ${err.message}`));
+    setTimeout(start, RESTART_DELAY);
   });
 }
 
-log.info("WATCHDOG", "DAVID V1 Watchdog started — spawning Goat.js");
-startProject();
+process.on("SIGINT",  () => { if (child) child.kill("SIGINT");  process.exit(0); });
+process.on("SIGTERM", () => { if (child) child.kill("SIGTERM"); process.exit(0); });
+
+start();
